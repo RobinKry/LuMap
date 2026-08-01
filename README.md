@@ -1,6 +1,6 @@
 # LuMap
 
-Expo / React Native app: öffentliche Luma-Events (+ LinkedIn-Overlaps) auf einer Mapbox-Karte.
+Expo / React Native app: öffentliche Luma-Events (+ LinkedIn-Overlaps) auf Apple Maps.
 
 ## Data pipeline (v1)
 
@@ -15,7 +15,7 @@ Supabase tables: `events`, `event_guests`, `linkedin_contacts`, `event_overlaps`
 ```bash
 npm install
 cp .env.example .env.local
-# EXPO_PUBLIC_SUPABASE_* + EXPO_PUBLIC_MAPBOX_TOKEN setzen
+# EXPO_PUBLIC_SUPABASE_* setzen
 npx expo start
 ```
 

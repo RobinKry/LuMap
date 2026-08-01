@@ -1,22 +1,22 @@
-import Mapbox, {
-  Camera,
-  LocationPuck,
-  MapView,
-  MarkerView,
-  locationManager,
-} from '@rnmapbox/maps'
 import { Image } from 'expo-image'
-import { useEffect, useMemo, useRef } from 'react'
+import * as Location from 'expo-location'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { useAppTheme } from '../context/AppModeContext'
+import MapView, {
+  Marker,
+  PROVIDER_DEFAULT,
+  type Region,
+} from 'react-native-maps'
 import { fonts, LM } from '../theme/tokens'
 import type { EventItem } from '../types'
 import { getBlurredCoordinates } from '../utils/privacyBlur'
 
-const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? ''
-Mapbox.setAccessToken(mapboxToken)
-
-const BERLIN: [number, number] = [13.405, 52.52]
+const BERLIN: Region = {
+  latitude: 52.52,
+  longitude: 13.405,
+  latitudeDelta: 0.08,
+  longitudeDelta: 0.08,
+}
 const MAX_PINS = 48
 const PIN_SIZE = 40
 
@@ -28,7 +28,7 @@ type Props = {
 
 type PinModel = {
   event: EventItem
-  coordinate: [number, number]
+  coordinate: { latitude: number; longitude: number }
   logoUrl: string | null
   initial: string
 }
@@ -62,7 +62,10 @@ function buildPins(events: EventItem[]): PinModel[] {
 
     pins.push({
       event,
-      coordinate: [coords.longitude, coords.latitude],
+      coordinate: {
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      },
       logoUrl,
       initial: initial || '?',
     })
@@ -135,30 +138,50 @@ export function InteractiveHeatmap({
   selectedEventId,
   onSelectEvent,
 }: Props) {
-  const { theme } = useAppTheme()
-  const cameraRef = useRef<Camera>(null)
+  const mapRef = useRef<MapView>(null)
   const didCenterOnUser = useRef(false)
-
+  const [tracksViewChanges, setTracksViewChanges] = useState(true)
+  // Gate the system blue puck on when-in-use permission so MKMapView
+  // actually lights it up after the prompt (not only at first mount).
+  const [locationAllowed, setLocationAllowed] = useState(false)
   const pins = useMemo(() => buildPins(events), [events])
 
   useEffect(() => {
-    let cancelled = false
-    locationManager.setMinDisplacement(5)
-    locationManager.start()
+    // Custom marker images need a short track window, then freeze for perf.
+    setTracksViewChanges(true)
+    const t = setTimeout(() => setTracksViewChanges(false), 800)
+    return () => clearTimeout(t)
+  }, [pins, selectedEventId])
 
-    const centerOnce = async () => {
+  useEffect(() => {
+    let cancelled = false
+
+    const enableUserLocation = async () => {
       if (cancelled || didCenterOnUser.current) return
       try {
-        const loc = await locationManager.getLastKnownLocation()
-        if (cancelled || !loc?.coords) return
+        const { status } = await Location.requestForegroundPermissionsAsync()
+        if (cancelled || status !== 'granted') return
+
+        // Turn on Apple Maps / Google blue user-location puck.
+        setLocationAllowed(true)
+
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        })
+        if (cancelled) return
         const { longitude, latitude } = loc.coords
         if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return
+
         didCenterOnUser.current = true
-        cameraRef.current?.setCamera({
-          centerCoordinate: [longitude, latitude],
-          zoomLevel: 12.5,
-          animationDuration: 900,
-        })
+        mapRef.current?.animateToRegion(
+          {
+            latitude,
+            longitude,
+            latitudeDelta: 0.045,
+            longitudeDelta: 0.045,
+          },
+          900,
+        )
       } catch (error) {
         console.warn(
           '[map] user location unavailable, keeping Berlin',
@@ -167,63 +190,41 @@ export function InteractiveHeatmap({
       }
     }
 
-    void centerOnce()
-    const listener = () => {
-      void centerOnce()
-    }
-    locationManager.addListener(listener)
-
+    void enableUserLocation()
     return () => {
       cancelled = true
-      locationManager.removeListener(listener)
-      locationManager.stop()
     }
   }, [])
 
   return (
     <View style={styles.fill}>
       <MapView
+        ref={mapRef}
         style={styles.fill}
-        styleURL={theme.mapStyle}
-        compassEnabled={false}
-        logoEnabled={false}
-        attributionEnabled={false}
-        scaleBarEnabled={false}
+        provider={PROVIDER_DEFAULT}
+        initialRegion={BERLIN}
+        showsUserLocation={locationAllowed}
+        showsMyLocationButton={locationAllowed}
+        followsUserLocation={false}
+        showsCompass={false}
+        showsPointsOfInterests
+        mapType="standard"
+        userInterfaceStyle="light"
       >
-        <Camera
-          ref={cameraRef}
-          defaultSettings={{
-            centerCoordinate: BERLIN,
-            zoomLevel: 11.5,
-          }}
-        />
-
-        <LocationPuck
-          visible
-          puckBearing="heading"
-          puckBearingEnabled
-          pulsing={{
-            isEnabled: true,
-            color: LM.mint300,
-            radius: 'accuracy',
-          }}
-        />
-
         {pins.map((pin) => (
-          <MarkerView
+          <Marker
             key={pin.event.id}
             coordinate={pin.coordinate}
-            allowOverlap
-            allowOverlapWithPuck
             anchor={{ x: 0.5, y: 0.5 }}
-            isSelected={selectedEventId === pin.event.id}
+            tracksViewChanges={tracksViewChanges}
+            onPress={() => onSelectEvent(pin.event)}
           >
             <EventLogoPin
               pin={pin}
               selected={selectedEventId === pin.event.id}
               onPress={() => onSelectEvent(pin.event)}
             />
-          </MarkerView>
+          </Marker>
         ))}
       </MapView>
     </View>
@@ -279,14 +280,14 @@ const styles = StyleSheet.create({
   },
   countBadge: {
     position: 'absolute',
-    right: -5,
-    bottom: -3,
-    minWidth: 18,
-    paddingHorizontal: 4,
-    paddingVertical: 1.5,
+    right: -7,
+    bottom: -4,
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 5,
     borderRadius: 999,
     backgroundColor: LM.ink900,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -296,8 +297,8 @@ const styles = StyleSheet.create({
   },
   countBadgeText: {
     fontFamily: fonts.uiBold,
-    fontSize: 9,
-    lineHeight: 12,
+    fontSize: 11,
+    lineHeight: 13,
     color: '#FFFFFF',
   },
 })

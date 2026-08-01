@@ -35,9 +35,9 @@
     "plugins": [
       "expo-web-browser",
       [
-        "@rnmapbox/maps",
+        "expo-location",
         {
-          "RNMapboxMapsDownloadToken": ""
+          "locationWhenInUsePermission": "LuMap zeigt Events in deiner Nähe auf der Karte."
         }
       ],
       "expo-font",

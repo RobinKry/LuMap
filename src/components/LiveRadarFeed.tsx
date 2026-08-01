@@ -10,7 +10,7 @@ type Props = {
   events: EventItem[]
   selectedEventId?: string | null
   onSelectEvent: (event: EventItem) => void
-  /** Extra bottom padding so content clears the glass tab bar. */
+  /** Extra bottom padding inside the list (tab bar is a flex sibling). */
   bottomInset?: number
 }
 
@@ -18,7 +18,7 @@ export function LiveRadarFeed({
   events,
   selectedEventId,
   onSelectEvent,
-  bottomInset = 100,
+  bottomInset = 24,
 }: Props) {
   const { theme } = useAppTheme()
   const insets = useSafeAreaInsets()

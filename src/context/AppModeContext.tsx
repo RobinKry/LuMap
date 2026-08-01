@@ -19,7 +19,6 @@ export type ModeTheme = {
   textMuted: string
   textFaint: string
   border: string
-  mapStyle: string
 }
 
 /** Single light theme — no WORK/PARTY modes. */
@@ -36,7 +35,6 @@ export const APP_THEME: ModeTheme = {
   textMuted: LM.ink500,
   textFaint: LM.ink300,
   border: LM.alpha10,
-  mapStyle: 'mapbox://styles/mapbox/light-v11',
 }
 
 type ThemeContextValue = {

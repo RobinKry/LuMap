@@ -1,6 +1,6 @@
 import * as WebBrowser from 'expo-web-browser'
 import { Image } from 'expo-image'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { useAppTheme } from '../context/AppModeContext'
 import { fonts, LM } from '../theme/tokens'
 import type { EventAttendeePreview, EventItem, MatchPersonPreview } from '../types'
@@ -347,31 +347,14 @@ export function EventCard({ event, selected = false, onSelect }: Props) {
                 >
                   {showMatches ? 'Weitere Gäste' : 'Gäste'}
                 </Text>
-                <ScrollView style={{ maxHeight: 140 }} nestedScrollEnabled>
-                  {otherGuests.slice(0, 24).map((g, i) => {
-                    const visible = Math.min(otherGuests.length, 24)
-                    return (
-                      <GuestRow
-                        key={g.id}
-                        guest={g}
-                        index={i}
-                        isLast={i === visible - 1 && otherGuests.length <= 24}
-                      />
-                    )
-                  })}
-                  {otherGuests.length > 24 ? (
-                    <Text
-                      style={{
-                        fontFamily: fonts.ui,
-                        fontSize: 12,
-                        color: theme.textMuted,
-                        marginTop: 2,
-                      }}
-                    >
-                      +{otherGuests.length - 24} weitere
-                    </Text>
-                  ) : null}
-                </ScrollView>
+                {otherGuests.map((g, i) => (
+                  <GuestRow
+                    key={g.id}
+                    guest={g}
+                    index={i}
+                    isLast={i === otherGuests.length - 1}
+                  />
+                ))}
               </View>
             ) : null}
           </View>
