@@ -13,9 +13,11 @@ import { useAppTheme } from '../context/AppModeContext'
 import {
   countLinkedInContacts,
   importLinkedInCsv,
+  listContactSharedEvents,
   refreshOverlaps,
   syncLumaFeed,
 } from '../services/eventsApi'
+import type { ContactSharedEventRow } from '../types'
 import {
   getLumaPreferences,
   LUMA_INTERESTS,
@@ -29,7 +31,7 @@ import { fonts } from '../theme/tokens'
 type Props = {
   onDataChanged?: () => void
   onClose?: () => void
-  /** Extra bottom padding so content clears the glass tab bar. */
+  /** Extra bottom padding so content clears the tab bar. */
   bottomInset?: number
 }
 
@@ -70,9 +72,15 @@ export function SettingsPanel({
   const [status, setStatus] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [contactCount, setContactCount] = useState(0)
+  const [topShared, setTopShared] = useState<ContactSharedEventRow[]>([])
 
   const refreshCount = useCallback(async () => {
-    setContactCount(await countLinkedInContacts())
+    const [count, shared] = await Promise.all([
+      countLinkedInContacts(),
+      listContactSharedEvents(8),
+    ])
+    setContactCount(count)
+    setTopShared(shared)
   }, [])
 
   useEffect(() => {
@@ -378,6 +386,48 @@ export function SettingsPanel({
       >
         {contactCount} Kontakte importiert
       </Text>
+      {topShared.length > 0 ? (
+        <View className="mb-4">
+          <Text
+            className="mb-2"
+            style={{
+              fontFamily: fonts.ui,
+              fontSize: 13,
+              color: theme.textMuted,
+            }}
+          >
+            Meiste gemeinsame Events
+          </Text>
+          {topShared.map((person) => (
+            <View
+              key={person.name_key || person.full_name}
+              className="mb-1.5 flex-row items-center justify-between"
+            >
+              <Text
+                numberOfLines={1}
+                style={{
+                  flex: 1,
+                  marginRight: 12,
+                  fontFamily: fonts.uiMedium,
+                  fontSize: 14,
+                  color: theme.textPrimary,
+                }}
+              >
+                {person.full_name}
+              </Text>
+              <Text
+                style={{
+                  fontFamily: fonts.uiSemiBold,
+                  fontSize: 13,
+                  color: theme.accent,
+                }}
+              >
+                {person.shared_events}×
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
       <Pressable
         disabled={busy}
         className="mb-3 items-center rounded-2xl py-3.5"
