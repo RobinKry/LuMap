@@ -35,7 +35,9 @@
         {
           "RNMapboxMapsDownloadToken": ""
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image"
     ],
     "extra": {
       "eas": {

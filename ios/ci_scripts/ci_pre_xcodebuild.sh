@@ -10,27 +10,18 @@ REPO_ROOT="$(ci_repo_root)"
 echo "ci_pre_xcodebuild: start repo=$REPO_ROOT"
 echo "ci_pre_xcodebuild: CI_XCODE_PROJECT=${CI_XCODE_PROJECT:-unset}"
 echo "ci_pre_xcodebuild: CI_XCODE_SCHEME=${CI_XCODE_SCHEME:-unset}"
+echo "ci_pre_xcodebuild: CI_ARCHIVE_PATH=${CI_ARCHIVE_PATH:-unset}"
+echo "ci_pre_xcodebuild: CI_DERIVED_DATA_PATH=${CI_DERIVED_DATA_PATH:-unset}"
+echo "ci_pre_xcodebuild: CI_XCODEBUILD_ACTION=${CI_XCODEBUILD_ACTION:-unset}"
 
 ci_prepare_path
-
-if [ ! -d "$REPO_ROOT/ios/Pods" ] || [ ! -f "$REPO_ROOT/ios/Podfile.lock" ]; then
-  echo "ci_pre_xcodebuild: Pods fehlen — npm + pod install"
-  ci_npm_install "$REPO_ROOT"
-fi
+ci_npm_install "$REPO_ROOT"
 ci_pod_install "$REPO_ROOT"
 
 NODE_BINARY="$(command -v node)"
 echo "export NODE_BINARY=${NODE_BINARY}" > "$REPO_ROOT/ios/.xcode.env.local"
 
-# Always install shim: Cloud workflow may still select .xcodeproj.
-ci_install_xcodebuild_workspace_shim
-
-if [[ "${CI_XCODE_PROJECT:-}" == *.xcodeproj ]]; then
-  echo "ci_pre_xcodebuild: WARN — workflow points at .xcodeproj; shim rewrites to .xcworkspace"
-fi
-
 cd "$REPO_ROOT"
-# Ensure target Release also disables explicit modules (Xcode 26 Archive)
 python3 <<'PY'
 from pathlib import Path
 p = Path("ios/LuMap.xcodeproj/project.pbxproj")
@@ -51,9 +42,20 @@ while "SWIFT_ENABLE_EXPLICIT_MODULES = NO;\n\t\t\t\tSWIFT_ENABLE_EXPLICIT_MODULE
     )
 if text != orig:
     p.write_text(text)
-    print("ci_pre_xcodebuild: patched SWIFT_ENABLE_EXPLICIT_MODULES on app target")
+    print("ci_pre_xcodebuild: patched SWIFT_ENABLE_EXPLICIT_MODULES")
 else:
-    print("ci_pre_xcodebuild: app target already has explicit modules setting or pattern mismatch")
+    print("ci_pre_xcodebuild: explicit modules already set")
 PY
+
+# Expo needs the CocoaPods workspace. Cloud often still selects .xcodeproj.
+# 1) Archive ourselves with the workspace into CI_ARCHIVE_PATH
+# 2) Hijack xcodebuild so Cloud's follow-up -project archive is a no-op
+if [[ "${CI_XCODEBUILD_ACTION:-}" == "archive" ]] || [[ "${CI_XCODE_PROJECT:-}" == *.xcodeproj ]]; then
+  echo "ci_pre_xcodebuild: forcing workspace archive + xcodebuild hijack"
+  ci_prearchive_workspace "$REPO_ROOT"
+  ci_hijack_xcodebuild "noop-archive"
+else
+  ci_hijack_xcodebuild "rewrite"
+fi
 
 echo "ci_pre_xcodebuild: done"
