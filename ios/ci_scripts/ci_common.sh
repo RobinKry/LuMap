@@ -16,7 +16,7 @@ ci_prepare_path() {
 
   if ! command -v node >/dev/null 2>&1; then
     if ! command -v brew >/dev/null 2>&1; then
-      echo "ci: FEHLER — weder node noch brew auf PATH"
+      echo "error: weder node noch brew auf PATH (Xcode Cloud image)"
       exit 127
     fi
     echo "ci: installing node via Homebrew"
@@ -26,7 +26,7 @@ ci_prepare_path() {
 
   if ! command -v pod >/dev/null 2>&1; then
     if ! command -v brew >/dev/null 2>&1; then
-      echo "ci: FEHLER — weder pod noch brew auf PATH"
+      echo "error: weder pod noch brew auf PATH (Xcode Cloud image)"
       exit 127
     fi
     echo "ci: installing cocoapods via Homebrew"
@@ -34,11 +34,11 @@ ci_prepare_path() {
   fi
 
   if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
-    echo "ci: FEHLER — node/npm fehlt nach setup"
+    echo "error: node/npm fehlt nach setup"
     exit 127
   fi
   if ! command -v pod >/dev/null 2>&1; then
-    echo "ci: FEHLER — pod fehlt nach setup"
+    echo "error: pod fehlt nach setup"
     exit 127
   fi
 
@@ -65,89 +65,98 @@ ci_pod_install() {
   echo "ci: pod install --repo-update (cwd=$(pwd))"
   pod install --repo-update
   if [ ! -f Podfile.lock ]; then
-    echo "ci: FEHLER — Podfile.lock fehlt nach pod install"
+    echo "error: Podfile.lock fehlt nach pod install"
     exit 1
   fi
   if [ ! -d LuMap.xcworkspace ]; then
-    echo "ci: FEHLER — LuMap.xcworkspace fehlt nach pod install"
+    echo "error: LuMap.xcworkspace fehlt nach pod install"
     exit 1
   fi
   echo "ci: pods ok"
 }
 
-# Write a wrapper that rewrites -project → -workspace (and can no-op archive).
+# Expo/CocoaPods Archive MUST use the workspace. Building .xcodeproj skips Pod
+# targets → missing *.modulemap / "No such module 'Expo'".
+ci_require_workspace_or_explain() {
+  local project="${CI_XCODE_PROJECT:-}"
+  echo "ci: CI_XCODE_PROJECT=${project:-unset}"
+  case "$project" in
+    *.xcworkspace)
+      echo "ci: workflow already points at xcworkspace — good"
+      return 0
+      ;;
+    *.xcodeproj|"")
+      # Still try hijack below; also print actionable error prefix for ASC logs.
+      echo "error: Xcode Cloud Project is set to .xcodeproj (or unset). Expo needs ios/LuMap.xcworkspace."
+      echo "error: Fix in App Store Connect → LuMap → Xcode Cloud → Workflow „Default“ → Edit → Environment → Xcode Project: ios/LuMap.xcworkspace → Save → Start Build"
+      echo "ci: attempting xcodebuild -project→-workspace rewrite as fallback"
+      return 0
+      ;;
+  esac
+}
+
+# Write a wrapper that rewrites -project → -workspace.
 ci_write_xcodebuild_wrapper() {
   local dest="$1"
-  local mode="${2:-rewrite}" # rewrite | noop-archive
   mkdir -p "$(dirname "$dest")"
-  cat > "$dest" <<WRAP
+  cat > "$dest" <<'WRAP'
 #!/bin/bash
-# xcodebuild-wrapper ($mode) — LuMap Expo/CocoaPods on Xcode Cloud
-MODE="$mode"
+# LuMap: force CocoaPods workspace when Cloud passes -project
 REAL_XB="/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild"
-if [ -x "\${REAL_XB}.lumap_real" ]; then
-  REAL_XB="\${REAL_XB}.lumap_real"
-fi
-
-# If we already archived in ci_pre, skip Cloud's broken .xcodeproj archive.
-if [ "\$MODE" = "noop-archive" ]; then
-  for a in "\$@"; do
-    if [ "\$a" = "archive" ]; then
-      echo "xcodebuild-wrapper: archive already done in ci_pre — exit 0" >&2
-      exit 0
-    fi
-  done
+if [ -x "${REAL_XB}.lumap_real" ]; then
+  REAL_XB="${REAL_XB}.lumap_real"
+elif [ -x "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild.lumap_real" ]; then
+  REAL_XB="/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild.lumap_real"
 fi
 
 ARGS=()
-while [ "\$#" -gt 0 ]; do
-  if [ "\$1" = "-project" ] && [ "\$#" -ge 2 ]; then
-    proj="\$2"
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = "-project" ] && [ "$#" -ge 2 ]; then
+    proj="$2"
     shift 2
-    case "\$proj" in
+    case "$proj" in
       *.xcodeproj)
-        ws="\${proj%.xcodeproj}.xcworkspace"
-        if [ -d "\$ws" ]; then
-          echo "xcodebuild-wrapper: -project \$(basename "\$proj") → -workspace \$(basename "\$ws")" >&2
-          ARGS+=("-workspace" "\$ws")
+        ws="${proj%.xcodeproj}.xcworkspace"
+        if [ -d "$ws" ]; then
+          echo "xcodebuild-wrapper: -project → -workspace $ws" >&2
+          ARGS+=("-workspace" "$ws")
           continue
         fi
-        dir="\$(dirname "\$proj")"
-        base="\$(basename "\$proj" .xcodeproj)"
-        alt="\${dir}/\${base}.xcworkspace"
-        if [ -d "\$alt" ]; then
-          echo "xcodebuild-wrapper: -project → -workspace \$alt" >&2
-          ARGS+=("-workspace" "\$alt")
-          continue
-        fi
-        ARGS+=("-project" "\$proj")
-        ;;
-      *)
-        ARGS+=("-project" "\$proj")
         ;;
     esac
+    ARGS+=("-project" "$proj")
     continue
   fi
-  ARGS+=("\$1")
+  ARGS+=("$1")
   shift
 done
-exec "\$REAL_XB" "\${ARGS[@]}"
+exec "$REAL_XB" "${ARGS[@]}"
 WRAP
   chmod +x "$dest"
 }
 
-# Back-compat alias (older post_clone called this name → exit 127).
 ci_install_xcodebuild_workspace_shim() {
-  ci_hijack_xcodebuild "${1:-rewrite}"
+  ci_hijack_xcodebuild
 }
 
-# Install wrapper so Cloud's absolute/PATH xcodebuild cannot archive via .xcodeproj.
 ci_hijack_xcodebuild() {
-  local mode="${1:-rewrite}"
   local wrap="$HOME/bin/xcodebuild"
+  local wrap_xcrun="$HOME/bin/xcrun"
   mkdir -p "$HOME/bin"
-  ci_write_xcodebuild_wrapper "$wrap" "$mode"
-  export PATH="$HOME/bin:$PATH"
+  ci_write_xcodebuild_wrapper "$wrap"
+  export PATH="$HOME/bin:/usr/local/bin:$PATH"
+
+  # Also wrap xcrun so `xcrun xcodebuild` hits our shim.
+  cat > "$wrap_xcrun" <<'XCRUN'
+#!/bin/bash
+REAL_XCRUN="/usr/bin/xcrun"
+if [ "${1:-}" = "xcodebuild" ]; then
+  shift
+  exec "$HOME/bin/xcodebuild" "$@"
+fi
+exec "$REAL_XCRUN" "$@"
+XCRUN
+  chmod +x "$wrap_xcrun"
 
   if [ -w /usr/local/bin ] || mkdir -p /usr/local/bin 2>/dev/null; then
     if [ -w /usr/local/bin ]; then
@@ -158,27 +167,28 @@ ci_hijack_xcodebuild() {
   fi
 
   local real="/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild"
-  # Prefer replacing the real binary (Cloud often uses absolute path).
+  local replaced=0
   if [ -x "$real" ] && [ ! -x "${real}.lumap_real" ]; then
-    if cp "$real" "${real}.lumap_real" 2>/dev/null; then
-      if cp "$wrap" "$real" 2>/dev/null; then
-        chmod +x "$real" 2>/dev/null || true
-        echo "ci: replaced $real with wrapper"
-      fi
+    if cp "$real" "${real}.lumap_real" 2>/dev/null && cp "$wrap" "$real" 2>/dev/null; then
+      chmod +x "$real" 2>/dev/null || true
+      echo "ci: replaced absolute xcodebuild with workspace wrapper"
+      replaced=1
     elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
       sudo cp "$real" "${real}.lumap_real"
       sudo cp "$wrap" "$real"
       sudo chmod +x "$real"
-      echo "ci: sudo-replaced $real with wrapper"
+      echo "ci: sudo-replaced absolute xcodebuild with workspace wrapper"
+      replaced=1
     else
-      echo "ci: WARN — cannot replace absolute xcodebuild (not writable)"
+      echo "ci: WARN — /Applications/.../xcodebuild not writable; PATH/xcrun shim only"
     fi
   elif [ -x "${real}.lumap_real" ]; then
     cp "$wrap" "$real" 2>/dev/null || sudo -n cp "$wrap" "$real" 2>/dev/null || true
-    echo "ci: refreshed wrapper at $real"
+    echo "ci: refreshed absolute xcodebuild wrapper"
+    replaced=1
   fi
 
-  # Point xcode-select at a fake developer dir as extra belt.
+  # Fake DEVELOPER_DIR so tools that resolve via xcode-select/DEVELOPER_DIR get the shim.
   local fake="$HOME/XcodeCloudFakeDeveloper"
   local app_dev="/Applications/Xcode.app/Contents/Developer"
   rm -rf "$fake"
@@ -202,9 +212,11 @@ ci_hijack_xcodebuild() {
   cp "$wrap" "$fake/usr/bin/xcodebuild"
   chmod +x "$fake/usr/bin/xcodebuild"
   export DEVELOPER_DIR="$fake"
+  # Persist for subsequent Cloud steps when supported
+  if [ -n "${CI_PRIMARY_REPOSITORY_PATH:-}" ]; then
+    echo "export DEVELOPER_DIR=\"$fake\"" >> "$HOME/.zshrc" 2>/dev/null || true
+    echo "export PATH=\"$HOME/bin:\$PATH\"" >> "$HOME/.zshrc" 2>/dev/null || true
+  fi
   xcode-select -s "$fake" 2>/dev/null || sudo -n xcode-select -s "$fake" 2>/dev/null || true
-  echo "ci: DEVELOPER_DIR=$DEVELOPER_DIR xcode-select=$(xcode-select -p 2>/dev/null || true)"
+  echo "ci: DEVELOPER_DIR=$DEVELOPER_DIR replaced_absolute=$replaced xcode-select=$(xcode-select -p 2>/dev/null || true)"
 }
-
-# Pre-archive removed: Xcode Cloud signing is only available during the
-# official xcodebuild step; calling archive in ci_pre exits with code 65.

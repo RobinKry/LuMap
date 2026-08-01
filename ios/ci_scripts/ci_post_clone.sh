@@ -13,12 +13,11 @@ ci_prepare_path
 ci_npm_install "$REPO_ROOT"
 ci_pod_install "$REPO_ROOT"
 
-# RN build phases need an absolute node path on Xcode Cloud.
 NODE_BINARY="$(command -v node)"
 echo "export NODE_BINARY=${NODE_BINARY}" > "$REPO_ROOT/ios/.xcode.env.local"
 echo "ci_post_clone: wrote ios/.xcode.env.local NODE_BINARY=$NODE_BINARY"
 
-# Persist xcodebuild wrapper on disk early (PATH alone does not survive later steps).
-ci_hijack_xcodebuild "rewrite"
+ci_require_workspace_or_explain
+ci_hijack_xcodebuild
 
 echo "ci_post_clone: done"
