@@ -84,11 +84,10 @@ function EventLogoPin({
   const hasMatches =
     typeof matchCount === 'number' && Number.isFinite(matchCount) && matchCount > 0
   const attendeeCount = pin.event.attendee_count
-  const showAttendees =
-    !hasMatches &&
+  const showAttendeeBadge =
     typeof attendeeCount === 'number' &&
-    Number.isFinite(attendeeCount)
-  const badgeValue = hasMatches ? matchCount : showAttendees ? attendeeCount : null
+    Number.isFinite(attendeeCount) &&
+    attendeeCount > 0
 
   return (
     <Pressable onPress={onPress} hitSlop={6}>
@@ -96,9 +95,9 @@ function EventLogoPin({
         <View
           style={[
             styles.pinOuter,
-            selected && styles.pinSelected,
-            pin.event.is_residential && styles.pinResidential,
             hasMatches && styles.pinHasMatch,
+            pin.event.is_residential && styles.pinResidential,
+            selected && styles.pinSelected,
           ]}
         >
           {pin.logoUrl ? (
@@ -114,16 +113,15 @@ function EventLogoPin({
             </View>
           )}
         </View>
-        {badgeValue != null ? (
+        {showAttendeeBadge ? (
           <View
             style={[
               styles.countBadge,
-              hasMatches && styles.matchBadge,
               selected && styles.countBadgeSelected,
             ]}
           >
             <Text style={styles.countBadgeText} numberOfLines={1}>
-              {badgeValue}
+              {attendeeCount}
             </Text>
           </View>
         ) : null}
@@ -281,26 +279,25 @@ const styles = StyleSheet.create({
   },
   countBadge: {
     position: 'absolute',
-    right: -6,
-    bottom: -4,
-    minWidth: 20,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
+    right: -5,
+    bottom: -3,
+    minWidth: 18,
+    paddingHorizontal: 4,
+    paddingVertical: 1.5,
     borderRadius: 999,
     backgroundColor: LM.ink900,
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
     alignItems: 'center',
-  },
-  matchBadge: {
-    backgroundColor: LM.linkedin,
+    justifyContent: 'center',
   },
   countBadgeSelected: {
     backgroundColor: LM.lilac500,
   },
   countBadgeText: {
     fontFamily: fonts.uiBold,
-    fontSize: 10,
+    fontSize: 9,
+    lineHeight: 12,
     color: '#FFFFFF',
   },
 })

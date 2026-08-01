@@ -343,7 +343,7 @@ export function SettingsPanel({
         }}
       >
         Connections.csv oder Invitations.csv — offizieller Datenexport, kein
-        Scraping. Dein eigener Name wird ausgeschlossen.
+        Scraping.
       </Text>
       <Text
         className="mb-2"
@@ -430,7 +430,7 @@ export function SettingsPanel({
       ) : null}
       <Pressable
         disabled={busy}
-        className="mb-3 items-center rounded-2xl py-3.5"
+        className="mb-1.5 items-center rounded-2xl py-3.5"
         style={{
           backgroundColor: theme.cardBg,
           borderWidth: 1,
@@ -491,6 +491,17 @@ export function SettingsPanel({
           CSV hochladen
         </Text>
       </Pressable>
+      <Text
+        className="mb-3"
+        style={{
+          fontFamily: fonts.ui,
+          fontSize: 11,
+          lineHeight: 16,
+          color: theme.textFaint,
+        }}
+      >
+        Dein Name wird beim Import übersprungen.
+      </Text>
       <Pressable
         disabled={busy}
         className="mb-6 items-center rounded-2xl py-3.5"

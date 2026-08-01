@@ -3,9 +3,11 @@ import { Image } from 'expo-image'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useAppTheme } from '../context/AppModeContext'
 import { fonts, LM } from '../theme/tokens'
-import type { EventAttendeePreview, EventItem } from '../types'
+import type { EventAttendeePreview, EventItem, MatchPersonPreview } from '../types'
 
 const AVATAR_TINTS = [LM.lilac300, LM.mint300, LM.butter300, LM.peach300]
+const TOP_MATCHES = 5
+const LINKEDIN_WASH = 'rgba(10,102,194,0.07)'
 
 function platformBadge(platform: EventItem['source_platform']) {
   switch (platform) {
@@ -22,43 +24,48 @@ function platformBadge(platform: EventItem['source_platform']) {
   }
 }
 
+function sharedEventsLabel(shared: number | undefined): string | null {
+  if (typeof shared !== 'number' || !Number.isFinite(shared) || shared <= 0) {
+    return null
+  }
+  return shared === 1 ? '1 gemeinsames Event' : `${shared} gemeinsame Events`
+}
+
 function GuestRow({
   guest,
   index,
-  isMatch,
+  emphasize,
+  isLast,
 }: {
   guest: EventAttendeePreview
   index: number
-  isMatch?: boolean
+  emphasize?: boolean
+  isLast?: boolean
 }) {
   const { theme } = useAppTheme()
   const initial = (guest.display_name || '?').slice(0, 1).toUpperCase()
-  const shared = guest.shared_events ?? 0
-  const sharedLabel =
-    isMatch && shared > 0
-      ? shared === 1
-        ? ' · 1 gemeinsames Event'
-        : ` · ${shared} gemeinsame Events`
-      : isMatch
-        ? ' · LinkedIn'
-        : ''
+  const sharedLabel = emphasize ? sharedEventsLabel(guest.shared_events) : null
+
   return (
-    <View className="mb-2 flex-row items-center gap-2.5">
+    <View
+      className="flex-row items-center gap-2.5"
+      style={{ marginBottom: isLast ? 0 : 8 }}
+    >
       <View
-        className="h-8 w-8 items-center justify-center overflow-hidden rounded-full"
+        className="h-7 w-7 items-center justify-center overflow-hidden rounded-full"
         style={{ backgroundColor: AVATAR_TINTS[index % AVATAR_TINTS.length] }}
       >
         {guest.avatar_url ? (
           <Image
             source={{ uri: guest.avatar_url }}
-            style={{ width: 32, height: 32 }}
+            style={{ width: 28, height: 28 }}
             contentFit="cover"
           />
         ) : (
           <Text
             style={{
               fontFamily: fonts.displayMedium,
-              fontSize: 12,
+              fontSize: 11,
               color: LM.ink900,
             }}
           >
@@ -66,26 +73,34 @@ function GuestRow({
           </Text>
         )}
       </View>
-      <Text
-        numberOfLines={1}
-        style={{
-          flex: 1,
-          fontFamily: isMatch ? fonts.uiSemiBold : fonts.uiMedium,
-          fontSize: 13,
-          color: isMatch ? LM.linkedin : theme.textBody,
-        }}
-      >
-        {guest.display_name}
-        {sharedLabel}
-      </Text>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text
+          numberOfLines={1}
+          style={{
+            fontFamily: emphasize ? fonts.uiSemiBold : fonts.uiMedium,
+            fontSize: 13,
+            color: theme.textBody,
+          }}
+        >
+          {guest.display_name}
+        </Text>
+        {sharedLabel ? (
+          <Text
+            numberOfLines={1}
+            style={{
+              fontFamily: fonts.ui,
+              fontSize: 11,
+              lineHeight: 14,
+              marginTop: 1,
+              color: theme.textMuted,
+            }}
+          >
+            {sharedLabel}
+          </Text>
+        ) : null}
+      </View>
     </View>
   )
-}
-
-function formatMatchPerson(name: string, shared: number): string {
-  if (shared > 1) return `${name} · ${shared} Events`
-  if (shared === 1) return `${name} · 1 Event`
-  return name
 }
 
 type Props = {
@@ -97,28 +112,61 @@ type Props = {
 export function EventCard({ event, selected = false, onSelect }: Props) {
   const { theme } = useAppTheme()
   const guests = event.guests ?? []
-  const showGuests = event.guest_list_public && guests.length > 0
   const description = (event.description ?? '').trim()
   const hasAttendeeCount =
     typeof event.attendee_count === 'number' &&
-    Number.isFinite(event.attendee_count)
-  const hasLinkedInMatches =
-    typeof event.linkedin_match_count === 'number' &&
-    event.linkedin_match_count > 0
-  const matchPeople =
+    Number.isFinite(event.attendee_count) &&
+    event.attendee_count > 0
+
+  const matchPeople: MatchPersonPreview[] =
     event.match_people && event.match_people.length > 0
       ? event.match_people
       : (event.match_preview ?? []).map((full_name) => ({
           full_name,
-          shared_events: 1,
+          shared_events:
+            guests.find(
+              (g) =>
+                g.display_name.trim().toLowerCase() ===
+                full_name.trim().toLowerCase(),
+            )?.shared_events ?? 0,
         }))
-  const matchNameSet = new Set(
-    matchPeople.map((p) => p.full_name.trim().toLowerCase()),
+
+  const topMatches = matchPeople.slice(0, TOP_MATCHES)
+  const topMatchNameSet = new Set(
+    topMatches.map((p) => p.full_name.trim().toLowerCase()),
   )
-  const matchPreviewLabel = matchPeople
-    .slice(0, 3)
-    .map((p) => formatMatchPerson(p.full_name, p.shared_events))
-    .join(', ')
+
+  // Prefer guest rows for matches when available (avatar + shared_events).
+  const matchGuestRows: EventAttendeePreview[] = topMatches.map((person, i) => {
+    const key = person.full_name.trim().toLowerCase()
+    const fromGuest = guests.find(
+      (g) => g.display_name.trim().toLowerCase() === key,
+    )
+    if (fromGuest) {
+      return {
+        ...fromGuest,
+        shared_events:
+          fromGuest.shared_events ??
+          (person.shared_events > 0 ? person.shared_events : undefined),
+      }
+    }
+    return {
+      id: `match-${event.id}-${i}-${person.full_name}`,
+      display_name: person.full_name,
+      avatar_url: null,
+      ...(person.shared_events > 0
+        ? { shared_events: person.shared_events }
+        : {}),
+    }
+  })
+
+  const otherGuests = guests.filter(
+    (g) => !topMatchNameSet.has(g.display_name.trim().toLowerCase()),
+  )
+
+  const showMatches = topMatches.length > 0
+  const showOtherGuests = otherGuests.length > 0
+  const showPeopleSection = showMatches || showOtherGuests
 
   return (
     <Pressable
@@ -226,122 +274,111 @@ export function EventCard({ event, selected = false, onSelect }: Props) {
           </Text>
         ) : null}
 
-        {hasAttendeeCount || hasLinkedInMatches ? (
-          <View className="mt-3 flex-row gap-5">
-            {hasAttendeeCount ? (
-              <View>
-                <Text
-                  style={{
-                    fontFamily: fonts.display,
-                    fontSize: 18,
-                    color: theme.textPrimary,
-                  }}
-                >
-                  {event.attendee_count}
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: fonts.ui,
-                    fontSize: 10,
-                    color: theme.textMuted,
-                  }}
-                >
-                  dabei
-                </Text>
-              </View>
-            ) : null}
-            {hasLinkedInMatches ? (
-              <View>
-                <Text
-                  style={{
-                    fontFamily: fonts.display,
-                    fontSize: 18,
-                    color: theme.textPrimary,
-                  }}
-                >
-                  {event.linkedin_match_count}
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: fonts.ui,
-                    fontSize: 10,
-                    color: theme.textMuted,
-                  }}
-                >
-                  LinkedIn-Match
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-
-        {matchPeople.length > 0 ? (
-          <Text
-            className="mt-2"
-            style={{
-              fontFamily: fonts.ui,
-              fontSize: 11,
-              color: theme.textMuted,
-            }}
-          >
-            z. B. {matchPreviewLabel}
-            {event.guest_list_public === false ? '' : ' · Namens-Match'}
-          </Text>
-        ) : null}
-
-        {showGuests ? (
-          <View className="mt-3">
+        {hasAttendeeCount ? (
+          <View className="mt-2.5">
             <Text
-              className="mb-2"
               style={{
-                fontFamily: fonts.uiBold,
-                fontSize: 10,
-                letterSpacing: 0.8,
-                color: theme.textMuted,
-                textTransform: 'uppercase',
+                fontFamily: fonts.display,
+                fontSize: 16,
+                letterSpacing: -0.2,
+                lineHeight: 20,
+                color: theme.textPrimary,
               }}
             >
-              Teilnehmer
+              {event.attendee_count}
             </Text>
-            <ScrollView style={{ maxHeight: 140 }} nestedScrollEnabled>
-              {guests.slice(0, 24).map((g, i) => (
-                <GuestRow
-                  key={g.id}
-                  guest={g}
-                  index={i}
-                  isMatch={matchNameSet.has(g.display_name.trim().toLowerCase())}
-                />
-              ))}
-              {guests.length > 24 ? (
+            <Text
+              style={{
+                fontFamily: fonts.ui,
+                fontSize: 10,
+                marginTop: 1,
+                color: theme.textMuted,
+              }}
+            >
+              dabei
+            </Text>
+          </View>
+        ) : null}
+
+        {showPeopleSection ? (
+          <View className="mt-3">
+            {showMatches ? (
+              <View
+                className="mb-3 rounded-2xl px-3 py-2.5"
+                style={{ backgroundColor: LINKEDIN_WASH }}
+              >
                 <Text
                   style={{
-                    fontFamily: fonts.ui,
-                    fontSize: 12,
-                    color: theme.textMuted,
+                    fontFamily: fonts.uiBold,
+                    fontSize: 10,
+                    letterSpacing: 0.8,
+                    color: LM.linkedin,
+                    textTransform: 'uppercase',
+                    marginBottom: 8,
                   }}
                 >
-                  +{guests.length - 24} weitere
+                  Deine Connections
                 </Text>
-              ) : null}
-            </ScrollView>
+                {matchGuestRows.map((g, i) => (
+                  <GuestRow
+                    key={g.id}
+                    guest={g}
+                    index={i}
+                    emphasize
+                    isLast={i === matchGuestRows.length - 1}
+                  />
+                ))}
+              </View>
+            ) : null}
+
+            {showOtherGuests ? (
+              <View>
+                <Text
+                  style={{
+                    fontFamily: fonts.uiBold,
+                    fontSize: 10,
+                    letterSpacing: 0.8,
+                    color: theme.textMuted,
+                    textTransform: 'uppercase',
+                    marginBottom: 8,
+                  }}
+                >
+                  {showMatches ? 'Weitere Gäste' : 'Gäste'}
+                </Text>
+                <ScrollView style={{ maxHeight: 140 }} nestedScrollEnabled>
+                  {otherGuests.slice(0, 24).map((g, i) => {
+                    const visible = Math.min(otherGuests.length, 24)
+                    return (
+                      <GuestRow
+                        key={g.id}
+                        guest={g}
+                        index={i}
+                        isLast={i === visible - 1 && otherGuests.length <= 24}
+                      />
+                    )
+                  })}
+                  {otherGuests.length > 24 ? (
+                    <Text
+                      style={{
+                        fontFamily: fonts.ui,
+                        fontSize: 12,
+                        color: theme.textMuted,
+                        marginTop: 2,
+                      }}
+                    >
+                      +{otherGuests.length - 24} weitere
+                    </Text>
+                  ) : null}
+                </ScrollView>
+              </View>
+            ) : null}
           </View>
-        ) : event.guest_list_public === false ? (
-          <Text
-            className="mt-3"
-            style={{
-              fontFamily: fonts.ui,
-              fontSize: 12,
-              color: theme.textMuted,
-            }}
-          >
-            Guest-List privat (keine Namen)
-          </Text>
         ) : null}
 
         {event.source_platform === 'LINKEDIN' && event.original_author_name ? (
           <View
             className="mt-3 rounded-2xl px-3 py-2.5"
-            style={{ backgroundColor: 'rgba(10,102,194,0.08)' }}
+            style={{ backgroundColor: LINKEDIN_WASH }}
           >
             <Text
               style={{
