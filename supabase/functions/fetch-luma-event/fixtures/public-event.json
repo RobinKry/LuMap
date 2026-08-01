@@ -1,0 +1,19 @@
+{
+  "api_id": "evt-fixture-public",
+  "name": "AI Builders Meetup",
+  "url": "https://lu.ma/ai-builders-berlin",
+  "start_at": "2026-08-06T17:00:00.000Z",
+  "geo_address_info": {
+    "full_address": "Factory Berlin, Berlin",
+    "latitude": 52.5311,
+    "longitude": 13.3842
+  },
+  "hosts": [{ "name": "ML Berlin" }],
+  "guest_count": 3,
+  "show_guest_list": true,
+  "guests": [
+    { "name": "Sara Klein", "avatar_url": null },
+    { "name": "Jonas Weber", "avatar_url": null },
+    { "name": "Mira Shah", "avatar_url": null }
+  ]
+}

@@ -11,13 +11,13 @@ Expo / React Native app: Luma + LinkedIn events on a Mapbox map, with **PARTY** 
 | PARTY | Electric Lime `#C0FF00` | `dark-v11` | Social / residential (blurred) |
 | WORK | Cobalt `#0052FF` | `navigation-night-v1` | Luma + LinkedIn professional |
 
-## Stack
+## Data pipeline (v1)
 
-- Expo 57 + React Native
-- NativeWind + Reanimated
-- Mapbox (`@rnmapbox/maps`)
-- Supabase (`EXPO_PUBLIC_*` + AsyncStorage auth)
-- Bottom sheet radar feed (`@gorhom/bottom-sheet`)
+- **Luma:** Edge Function `fetch-luma-event` — öffentliche Event-Metadaten + Guest-Namen nur wenn die Liste öffentlich ist
+- **LinkedIn:** Edge Function `import-linkedin-csv` — offizieller Connections.csv-Upload (kein Scraping)
+- **Overlaps:** SQL `refresh_event_overlaps` + Function `match-overlaps` (Name-Match)
+
+Supabase tables: `events`, `event_guests`, `linkedin_contacts`, `event_overlaps`, `user_tracked_events`
 
 ## Setup
 
@@ -28,7 +28,9 @@ cp .env.example .env.local
 npx expo start
 ```
 
-iOS native project (for Xcode / Xcode Cloud):
+In der App: **Settings** → LinkedIn-CSV hochladen + Luma-URL syncen.
+
+iOS:
 
 ```bash
 npx expo prebuild --platform ios
@@ -36,7 +38,3 @@ open ios/LuMap.xcworkspace
 ```
 
 Bundle ID: `com.lumap.com` · Team: `3RS7CS256A`
-
-## Data sources (v1)
-
-Primary: **Luma** + **LinkedIn**. Partiful / Eventbrite types + parsers are scaffolded for later.

@@ -5,10 +5,19 @@
     "ignoreDeprecations": "6.0"
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
+    "App.tsx",
+    "index.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
-    "nativewind-env.d.ts"
+    "nativewind-env.d.ts",
+    "css-modules.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "supabase/functions/**",
+    "ios/**",
+    "android/**"
   ]
 }

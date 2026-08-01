@@ -97,6 +97,31 @@ export const LiveRadarFeed = forwardRef<BottomSheet, Props>(
                   </Text>
                 ) : null}
 
+                <View className="mt-3 flex-row gap-4">
+                  <View>
+                    <Text className="text-base font-semibold text-white">
+                      {item.attendee_count ?? '—'}
+                    </Text>
+                    <Text className="text-[10px] text-white/50">dabei</Text>
+                  </View>
+                  <View>
+                    <Text className="text-base font-semibold text-white">
+                      {item.linkedin_match_count ?? 0}
+                    </Text>
+                    <Text className="text-[10px] text-white/50">
+                      LinkedIn-Match
+                    </Text>
+                  </View>
+                </View>
+                {(item.match_preview?.length ?? 0) > 0 ? (
+                  <Text className="mt-2 text-[11px] text-white/45">
+                    z. B. {item.match_preview!.slice(0, 3).join(', ')}
+                    {item.guest_list_public === false
+                      ? ''
+                      : ' · Namens-Match'}
+                  </Text>
+                ) : null}
+
                 <FriendAvatarStack
                   friends={item.friends ?? []}
                   extraCount={item.otherCount ?? 0}

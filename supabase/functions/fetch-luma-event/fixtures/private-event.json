@@ -1,0 +1,15 @@
+{
+  "api_id": "evt-fixture-private",
+  "name": "Private Founders Dinner",
+  "url": "https://lu.ma/private-founders-dinner",
+  "start_at": "2026-08-15T18:00:00.000Z",
+  "geo_address_info": {
+    "full_address": "Berlin",
+    "latitude": 52.52,
+    "longitude": 13.405
+  },
+  "hosts": [{ "name": "Secret Host" }],
+  "guest_count": 24,
+  "show_guest_list": false,
+  "guests": []
+}

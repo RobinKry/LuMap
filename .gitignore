@@ -31,7 +31,6 @@ xcuserdata/
 android/app/build/
 ios/build/
 ios/Pods/
-ios/Podfile.lock
 *.ipa
 *.dSYM.zip
 *.dSYM

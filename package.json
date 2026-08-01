@@ -17,6 +17,7 @@
     "@supabase/supabase-js": "^2.111.0",
     "expo": "~57.0.9",
     "expo-blur": "~57.0.2",
+    "expo-document-picker": "~57.0.1",
     "expo-haptics": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "expo-web-browser": "~57.0.2",
