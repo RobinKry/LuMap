@@ -17,6 +17,18 @@ dist-ssr
 # Supabase
 supabase/.temp
 
+# iOS / Xcode
+ios/build/
+**/DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

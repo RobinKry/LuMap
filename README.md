@@ -1,26 +1,39 @@
 # LuMap
 
-Mobile-first Web-App: Luma-Events auf einer Karte, mit Überschneidungen zu eigenen Past-Events und LinkedIn-Kontakten.
+Luma-Events auf einer Karte, mit Überschneidungen zu eigenen Past-Events und LinkedIn-Kontakten.
 
-## Tabs
+## Projekte
 
-- **Liste** (links) – Event-Liste mit Teilnehmer-/Overlap-Stats
-- **Karte** (Mitte, Default) – Leaflet-Karte mit Markern
-- **Einstellungen** (rechts) – Verbindungen (Platzhalter)
+| Pfad | Plattform |
+|------|-----------|
+| `/` (Root) | Web-Prototype (Vite + React) |
+| `ios/` | **iOS-App** (SwiftUI + MapKit) – Apple Developer Team `3RS7CS256A` |
 
-## Stack
+### Tabs (beide Clients)
 
-- Vite + React + TypeScript
-- React Router
-- Leaflet / react-leaflet
-- Supabase (`@supabase/supabase-js`)
+- **Liste** – Event-Liste mit Teilnehmer-/Overlap-Stats
+- **Karte** (Default) – Karte mit Markern
+- **Einstellungen** – Verbindungen (Platzhalter)
 
-## Setup
+## iOS
+
+```bash
+cd ios
+xcodegen generate   # falls project.yml geändert wurde
+open LuMap.xcodeproj
+```
+
+- Bundle ID: `com.lumap.app.lumap`
+- Team: Robin Kryszak (`3RS7CS256A`)
+- Deployment Target: iOS 17+
+
+In Xcode einmal auf einem echten Gerät / mit Automatic Signing bauen, damit die App-ID im Apple Developer Portal angelegt wird. Danach in [App Store Connect](https://appstoreconnect.apple.com) eine neue App mit derselben Bundle-ID anlegen.
+
+## Web (Prototype)
 
 ```bash
 npm install
 cp .env.example .env.local
-# Werte aus dem Supabase-Dashboard eintragen
 npm run dev
 ```
 

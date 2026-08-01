@@ -1,0 +1,361 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		14B6C2C00828248248FE97D7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6971F3796E43F29105C4B3C0 /* Assets.xcassets */; };
+		295E738B9B5290DD3021F867 /* LumaEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFA73662FFA4DEDF4675428 /* LumaEvent.swift */; };
+		36F15656266F861AC27FEAE7 /* EventStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19269A0A88CD7FDAF69C55EE /* EventStatsView.swift */; };
+		37345B1E05711EE4888CB49F /* LuMapTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 469DCE592D4E6A1FC23338B0 /* LuMapTheme.swift */; };
+		50A529B88E2D1A9AD4776630 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546F4CA2B80DC9F94580FC5F /* SettingsView.swift */; };
+		A52720A68EB5368905F5BC84 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AFE843A36368771155480A /* MapView.swift */; };
+		AABC32B3ADA4A16CD384173C /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CDA49AEF4181AFE4ACBE69B /* RootTabView.swift */; };
+		AE744C3DD055A88A38FAB376 /* ListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3279E02A0D03D16C60BD0C74 /* ListView.swift */; };
+		E549ABA003ABB48AC8213559 /* LuMapApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83695046FA216685AAF66BE4 /* LuMapApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		00AFE843A36368771155480A /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
+		01A47C8EB9D811D9C43C316A /* LuMap.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LuMap.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		19269A0A88CD7FDAF69C55EE /* EventStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventStatsView.swift; sourceTree = "<group>"; };
+		3279E02A0D03D16C60BD0C74 /* ListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListView.swift; sourceTree = "<group>"; };
+		469DCE592D4E6A1FC23338B0 /* LuMapTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LuMapTheme.swift; sourceTree = "<group>"; };
+		546F4CA2B80DC9F94580FC5F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		5CDA49AEF4181AFE4ACBE69B /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
+		6971F3796E43F29105C4B3C0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		83695046FA216685AAF66BE4 /* LuMapApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LuMapApp.swift; sourceTree = "<group>"; };
+		8AFA73662FFA4DEDF4675428 /* LumaEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LumaEvent.swift; sourceTree = "<group>"; };
+		9E2FBFFFD62D8B56206A92CC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		24CE1A55233864C1764EE374 /* LuMap */ = {
+			isa = PBXGroup;
+			children = (
+				6971F3796E43F29105C4B3C0 /* Assets.xcassets */,
+				9E2FBFFFD62D8B56206A92CC /* Info.plist */,
+				83695046FA216685AAF66BE4 /* LuMapApp.swift */,
+				469DCE592D4E6A1FC23338B0 /* LuMapTheme.swift */,
+				345807EF6149852AD9391094 /* Models */,
+				82F92A320501F2CDD6CBC290 /* Views */,
+			);
+			path = LuMap;
+			sourceTree = "<group>";
+		};
+		345807EF6149852AD9391094 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				8AFA73662FFA4DEDF4675428 /* LumaEvent.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		67A0A402039CB7D5F8B25B31 = {
+			isa = PBXGroup;
+			children = (
+				24CE1A55233864C1764EE374 /* LuMap */,
+				E26D3274B616A089FD4EDD92 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		82F92A320501F2CDD6CBC290 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				19269A0A88CD7FDAF69C55EE /* EventStatsView.swift */,
+				3279E02A0D03D16C60BD0C74 /* ListView.swift */,
+				00AFE843A36368771155480A /* MapView.swift */,
+				5CDA49AEF4181AFE4ACBE69B /* RootTabView.swift */,
+				546F4CA2B80DC9F94580FC5F /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		E26D3274B616A089FD4EDD92 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				01A47C8EB9D811D9C43C316A /* LuMap.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		45A715CECC0DB7CBA201E0E4 /* LuMap */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FB35F07AECC6DBF92858C6B8 /* Build configuration list for PBXNativeTarget "LuMap" */;
+			buildPhases = (
+				34FB40F102C1D128E12137EA /* Sources */,
+				960E77989B757069888B4B40 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LuMap;
+			packageProductDependencies = (
+			);
+			productName = LuMap;
+			productReference = 01A47C8EB9D811D9C43C316A /* LuMap.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		1706B04EC5BD87163A1195AA /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					45A715CECC0DB7CBA201E0E4 = {
+						DevelopmentTeam = 3RS7CS256A;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 409211F5B1E348644E52D029 /* Build configuration list for PBXProject "LuMap" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 67A0A402039CB7D5F8B25B31;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = E26D3274B616A089FD4EDD92 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				45A715CECC0DB7CBA201E0E4 /* LuMap */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		960E77989B757069888B4B40 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				14B6C2C00828248248FE97D7 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		34FB40F102C1D128E12137EA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				36F15656266F861AC27FEAE7 /* EventStatsView.swift in Sources */,
+				AE744C3DD055A88A38FAB376 /* ListView.swift in Sources */,
+				E549ABA003ABB48AC8213559 /* LuMapApp.swift in Sources */,
+				37345B1E05711EE4888CB49F /* LuMapTheme.swift in Sources */,
+				295E738B9B5290DD3021F867 /* LumaEvent.swift in Sources */,
+				A52720A68EB5368905F5BC84 /* MapView.swift in Sources */,
+				AABC32B3ADA4A16CD384173C /* RootTabView.swift in Sources */,
+				50A529B88E2D1A9AD4776630 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1A4DCD6CAD21438F6A9BDAAF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 3RS7CS256A;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		1EFCA5B33C21F134304DACCD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 3RS7CS256A;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LuMap/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.lumap.app.lumap;
+				PRODUCT_NAME = LuMap;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		DAF7665C7E3C242E9F6AB378 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 3RS7CS256A;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LuMap/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.lumap.app.lumap;
+				PRODUCT_NAME = LuMap;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		E4C906A72D649B640AC3A962 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 3RS7CS256A;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		409211F5B1E348644E52D029 /* Build configuration list for PBXProject "LuMap" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A4DCD6CAD21438F6A9BDAAF /* Debug */,
+				E4C906A72D649B640AC3A962 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FB35F07AECC6DBF92858C6B8 /* Build configuration list for PBXNativeTarget "LuMap" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1EFCA5B33C21F134304DACCD /* Debug */,
+				DAF7665C7E3C242E9F6AB378 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 1706B04EC5BD87163A1195AA /* Project object */;
+}
