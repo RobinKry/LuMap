@@ -29,3 +29,14 @@ open ios/LuMap.xcworkspace
 ```
 
 Bundle ID: `com.lumap.com` · Team: `3RS7CS256A`
+
+## Xcode Cloud (wichtig)
+
+Expo/CocoaPods brauchen den **Workspace**, nicht das nackte Xcode-Projekt.
+
+1. [App Store Connect → LuMap → Xcode Cloud](https://appstoreconnect.apple.com/apps/6796983748/ci)
+2. Workflow **Default** → **Edit Workflow** → **Environment**
+3. **Xcode Project or Workspace** auf `ios/LuMap.xcworkspace` setzen (**nicht** `ios/LuMap.xcodeproj`)
+4. Speichern → Build starten
+
+`ios/ci_scripts` installieren npm/Pods und brechen ab, wenn ASC noch auf `.xcodeproj` zeigt (sonst `No such module 'Expo'`). Scripts können die ASC-Einstellung nicht überschreiben.

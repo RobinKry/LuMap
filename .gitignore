@@ -31,6 +31,8 @@ xcuserdata/
 android/app/build/
 ios/build/
 ios/Pods/
+ios/ci_scripts/CI_XCODE_PROJECT.txt
+ios/.xcode.env.local
 *.ipa
 *.dSYM.zip
 *.dSYM

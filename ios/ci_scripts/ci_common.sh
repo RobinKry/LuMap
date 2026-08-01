@@ -166,8 +166,31 @@ ci_workspace_configured() {
   return 1
 }
 
+# Write a small artifact next to ci_scripts so Archive logs show the ASC path
+# even when the UI collapses long script output.
+ci_write_workspace_diag() {
+  local diag_dir status_line
+  status_line="${1:-unknown}"
+  # BASH_SOURCE here is ci_common.sh (this file), which lives in ios/ci_scripts/.
+  diag_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  {
+    echo "status=${status_line}"
+    echo "CI_XCODE_PROJECT=${CI_XCODE_PROJECT:-unset}"
+    echo "CI_XCODE_SCHEME=${CI_XCODE_SCHEME:-unset}"
+    echo "CI_WORKSPACE=${CI_WORKSPACE:-unset}"
+    echo "CI_XCODEBUILD_ACTION=${CI_XCODEBUILD_ACTION:-unset}"
+    echo "expected=ios/LuMap.xcworkspace"
+    date -u +"utc=%Y-%m-%dT%H:%M:%SZ"
+  } > "$diag_dir/CI_XCODE_PROJECT.txt"
+  echo "ci: wrote $diag_dir/CI_XCODE_PROJECT.txt (status=${status_line})"
+  # Repeat on its own line — easy to grep in Archive → Logs.
+  echo "ci: DIAG CI_XCODE_PROJECT=${CI_XCODE_PROJECT:-unset}"
+}
+
 ci_print_workspace_fix_message() {
   local project="${CI_XCODE_PROJECT:-}"
+  # Xcode Cloud surfaces lines starting with "error:" as the Archive issue.
+  echo "error: Xcode Cloud Workflow muss ios/LuMap.xcworkspace nutzen — aktuell CI_XCODE_PROJECT='${project:-unset}' (nicht .xcodeproj). Scripts können ASC nicht überschreiben."
   cat <<'EOF'
 
 ================================================================================
@@ -179,11 +202,14 @@ Pods (Expo, react-native-maps, …) are skipped → "No such module 'Expo'".
 ci_scripts CANNOT change this. You must fix App Store Connect:
 
   1. https://appstoreconnect.apple.com → Apps → LuMap → Xcode Cloud
-  2. Workflow „Default“ → Edit → Environment
-  3. Xcode Project / Workspace:
+  2. Workflow „Default“ → Edit Workflow → Environment
+  3. Xcode Project or Workspace:
        ios/LuMap.xcworkspace
      (NOT ios/LuMap.xcodeproj)
   4. Save → Start Build
+
+Direct link (team + app):
+  https://appstoreconnect.apple.com/apps/6796983748/ci
 
 Expected CI_XCODE_PROJECT value: a path containing LuMap.xcworkspace
 EOF
@@ -194,9 +220,11 @@ EOF
 # Soft check for post_clone: never abort npm/pod work; only warn loudly.
 ci_warn_unless_workspace() {
   if ci_workspace_configured; then
+    ci_write_workspace_diag "ok-workspace"
     return 0
   fi
   echo "ci: WARN — ASC still points at .xcodeproj; continuing so npm/pods still run."
+  ci_write_workspace_diag "warn-xcodeproj"
   ci_print_workspace_fix_message
   return 0
 }
@@ -204,9 +232,11 @@ ci_warn_unless_workspace() {
 # Hard check for pre_xcodebuild / archive gate.
 ci_require_workspace_or_explain() {
   if ci_workspace_configured; then
+    ci_write_workspace_diag "ok-workspace"
     return 0
   fi
-  echo "FATAL: refusing Archive against .xcodeproj"
+  echo "FATAL: refusing Archive against .xcodeproj (Build would hit No such module Expo)"
+  ci_write_workspace_diag "fatal-xcodeproj"
   ci_print_workspace_fix_message
   exit 1
 }
