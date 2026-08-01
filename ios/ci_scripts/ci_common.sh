@@ -206,33 +206,5 @@ ci_hijack_xcodebuild() {
   echo "ci: DEVELOPER_DIR=$DEVELOPER_DIR xcode-select=$(xcode-select -p 2>/dev/null || true)"
 }
 
-# Archive with workspace BEFORE Cloud's xcodebuild (fixes Expo modulemaps).
-ci_prearchive_workspace() {
-  local root="$1"
-  local ws="$root/ios/LuMap.xcworkspace"
-  local scheme="${CI_XCODE_SCHEME:-LuMap}"
-  local archive_path="${CI_ARCHIVE_PATH:-$root/ios/build/LuMap.xcarchive}"
-  local derived="${CI_DERIVED_DATA_PATH:-$root/ios/build/DerivedData}"
-  local real_xb="/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild"
-  if [ -x "${real_xb}.lumap_real" ]; then
-    real_xb="${real_xb}.lumap_real"
-  fi
-
-  mkdir -p "$(dirname "$archive_path")" "$derived"
-  echo "ci: workspace pre-archive → $archive_path"
-  echo "ci: scheme=$scheme derived=$derived"
-
-  "$real_xb" \
-    -workspace "$ws" \
-    -scheme "$scheme" \
-    -configuration Release \
-    -destination 'generic/platform=iOS' \
-    -derivedDataPath "$derived" \
-    -archivePath "$archive_path" \
-    archive \
-    DEVELOPMENT_TEAM="${CI_TEAM_ID:-3RS7CS256A}" \
-    -allowProvisioningUpdates
-
-  echo "ci: workspace pre-archive OK"
-  ls -la "$archive_path" | head -5 || true
-}
+# Pre-archive removed: Xcode Cloud signing is only available during the
+# official xcodebuild step; calling archive in ci_pre exits with code 65.

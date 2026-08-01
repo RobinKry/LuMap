@@ -47,15 +47,9 @@ else:
     print("ci_pre_xcodebuild: explicit modules already set")
 PY
 
-# Expo needs the CocoaPods workspace. Cloud often still selects .xcodeproj.
-# 1) Archive ourselves with the workspace into CI_ARCHIVE_PATH
-# 2) Hijack xcodebuild so Cloud's follow-up -project archive is a no-op
-if [[ "${CI_XCODEBUILD_ACTION:-}" == "archive" ]] || [[ "${CI_XCODE_PROJECT:-}" == *.xcodeproj ]]; then
-  echo "ci_pre_xcodebuild: forcing workspace archive + xcodebuild hijack"
-  ci_prearchive_workspace "$REPO_ROOT"
-  ci_hijack_xcodebuild "noop-archive"
-else
-  ci_hijack_xcodebuild "rewrite"
-fi
+# Do NOT pre-archive here: signing keychain is only ready during Cloud's own
+# xcodebuild step (pre-archive → exit 65). Instead rewrite -project → -workspace.
+echo "ci_pre_xcodebuild: installing xcodebuild workspace rewrite"
+ci_hijack_xcodebuild "rewrite"
 
 echo "ci_pre_xcodebuild: done"
