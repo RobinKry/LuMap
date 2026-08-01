@@ -22,9 +22,26 @@ function platformBadge(platform: EventItem['source_platform']) {
   }
 }
 
-function GuestRow({ guest, index }: { guest: EventAttendeePreview; index: number }) {
+function GuestRow({
+  guest,
+  index,
+  isMatch,
+}: {
+  guest: EventAttendeePreview
+  index: number
+  isMatch?: boolean
+}) {
   const { theme } = useAppTheme()
   const initial = (guest.display_name || '?').slice(0, 1).toUpperCase()
+  const shared = guest.shared_events ?? 0
+  const sharedLabel =
+    isMatch && shared > 0
+      ? shared === 1
+        ? ' · 1 gemeinsames Event'
+        : ` · ${shared} gemeinsame Events`
+      : isMatch
+        ? ' · LinkedIn'
+        : ''
   return (
     <View className="mb-2 flex-row items-center gap-2.5">
       <View
@@ -53,15 +70,22 @@ function GuestRow({ guest, index }: { guest: EventAttendeePreview; index: number
         numberOfLines={1}
         style={{
           flex: 1,
-          fontFamily: fonts.uiMedium,
+          fontFamily: isMatch ? fonts.uiSemiBold : fonts.uiMedium,
           fontSize: 13,
-          color: theme.textBody,
+          color: isMatch ? LM.linkedin : theme.textBody,
         }}
       >
         {guest.display_name}
+        {sharedLabel}
       </Text>
     </View>
   )
+}
+
+function formatMatchPerson(name: string, shared: number): string {
+  if (shared > 1) return `${name} · ${shared} Events`
+  if (shared === 1) return `${name} · 1 Event`
+  return name
 }
 
 type Props = {
@@ -75,6 +99,26 @@ export function EventCard({ event, selected = false, onSelect }: Props) {
   const guests = event.guests ?? []
   const showGuests = event.guest_list_public && guests.length > 0
   const description = (event.description ?? '').trim()
+  const hasAttendeeCount =
+    typeof event.attendee_count === 'number' &&
+    Number.isFinite(event.attendee_count)
+  const hasLinkedInMatches =
+    typeof event.linkedin_match_count === 'number' &&
+    event.linkedin_match_count > 0
+  const matchPeople =
+    event.match_people && event.match_people.length > 0
+      ? event.match_people
+      : (event.match_preview ?? []).map((full_name) => ({
+          full_name,
+          shared_events: 1,
+        }))
+  const matchNameSet = new Set(
+    matchPeople.map((p) => p.full_name.trim().toLowerCase()),
+  )
+  const matchPreviewLabel = matchPeople
+    .slice(0, 3)
+    .map((p) => formatMatchPerson(p.full_name, p.shared_events))
+    .join(', ')
 
   return (
     <Pressable
@@ -182,50 +226,56 @@ export function EventCard({ event, selected = false, onSelect }: Props) {
           </Text>
         ) : null}
 
-        <View className="mt-3 flex-row gap-5">
-          <View>
-            <Text
-              style={{
-                fontFamily: fonts.display,
-                fontSize: 18,
-                color: theme.textPrimary,
-              }}
-            >
-              {event.attendee_count ?? '—'}
-            </Text>
-            <Text
-              style={{
-                fontFamily: fonts.ui,
-                fontSize: 10,
-                color: theme.textMuted,
-              }}
-            >
-              dabei
-            </Text>
+        {hasAttendeeCount || hasLinkedInMatches ? (
+          <View className="mt-3 flex-row gap-5">
+            {hasAttendeeCount ? (
+              <View>
+                <Text
+                  style={{
+                    fontFamily: fonts.display,
+                    fontSize: 18,
+                    color: theme.textPrimary,
+                  }}
+                >
+                  {event.attendee_count}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: fonts.ui,
+                    fontSize: 10,
+                    color: theme.textMuted,
+                  }}
+                >
+                  dabei
+                </Text>
+              </View>
+            ) : null}
+            {hasLinkedInMatches ? (
+              <View>
+                <Text
+                  style={{
+                    fontFamily: fonts.display,
+                    fontSize: 18,
+                    color: theme.textPrimary,
+                  }}
+                >
+                  {event.linkedin_match_count}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: fonts.ui,
+                    fontSize: 10,
+                    color: theme.textMuted,
+                  }}
+                >
+                  LinkedIn-Match
+                </Text>
+              </View>
+            ) : null}
           </View>
-          <View>
-            <Text
-              style={{
-                fontFamily: fonts.display,
-                fontSize: 18,
-                color: theme.textPrimary,
-              }}
-            >
-              {event.linkedin_match_count ?? 0}
-            </Text>
-            <Text
-              style={{
-                fontFamily: fonts.ui,
-                fontSize: 10,
-                color: theme.textMuted,
-              }}
-            >
-              LinkedIn-Match
-            </Text>
-          </View>
-        </View>
+        ) : null}
 
-        {(event.match_preview?.length ?? 0) > 0 ? (
+        {matchPeople.length > 0 ? (
           <Text
             className="mt-2"
             style={{
@@ -234,7 +284,7 @@ export function EventCard({ event, selected = false, onSelect }: Props) {
               color: theme.textMuted,
             }}
           >
-            z. B. {event.match_preview!.slice(0, 3).join(', ')}
+            z. B. {matchPreviewLabel}
             {event.guest_list_public === false ? '' : ' · Namens-Match'}
           </Text>
         ) : null}
@@ -255,7 +305,12 @@ export function EventCard({ event, selected = false, onSelect }: Props) {
             </Text>
             <ScrollView style={{ maxHeight: 140 }} nestedScrollEnabled>
               {guests.slice(0, 24).map((g, i) => (
-                <GuestRow key={g.id} guest={g} index={i} />
+                <GuestRow
+                  key={g.id}
+                  guest={g}
+                  index={i}
+                  isMatch={matchNameSet.has(g.display_name.trim().toLowerCase())}
+                />
               ))}
               {guests.length > 24 ? (
                 <Text

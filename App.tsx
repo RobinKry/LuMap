@@ -11,31 +11,30 @@ import {
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans'
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet'
 import { useFonts } from 'expo-font'
 import { StatusBar } from 'expo-status-bar'
 import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, LogBox, Text, View } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { InteractiveHeatmap } from './src/components/InteractiveHeatmap'
 import { LiveRadarFeed } from './src/components/LiveRadarFeed'
 import { SettingsPanel } from './src/components/SettingsPanel'
+import { TabBar, type AppTab } from './src/components/TabBar'
 import { AppThemeProvider, useAppTheme } from './src/context/AppModeContext'
 import { ensureSession } from './src/services/auth'
-import {
-  discoverLumaEvents,
-  loadFeedEvents,
-  syncSavedLumaSources,
-} from './src/services/eventsApi'
+import { loadFeedEvents, syncLumaFeed } from './src/services/eventsApi'
+import { getLumaPreferences } from './src/services/lumaPreferences'
 import { fonts, LM } from './src/theme/tokens'
 import type { EventItem } from './src/types'
 
+LogBox.ignoreAllLogs(true)
+
 function HomeScreen() {
   const { theme } = useAppTheme()
+  const [tab, setTab] = useState<AppTab>('map')
   const [selected, setSelected] = useState<EventItem | null>(null)
   const [events, setEvents] = useState<EventItem[]>([])
-  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const refresh = useCallback(async () => {
     const rows = await loadFeedEvents()
@@ -45,38 +44,59 @@ function HomeScreen() {
   useEffect(() => {
     void (async () => {
       await ensureSession()
-      // Feed first so map/list aren't empty while discover/sync runs.
       await refresh()
+      const prefs = await getLumaPreferences()
       try {
-        await discoverLumaEvents({ place: 'berlin', limit: 30 })
+        await syncLumaFeed(prefs)
+        await refresh()
       } catch (error) {
         console.warn(
-          '[luma] discover failed',
+          '[luma] sync failed',
           error instanceof Error ? error.message : error,
         )
       }
-      await syncSavedLumaSources()
-      await refresh()
     })()
   }, [refresh])
 
-  const onSelectEvent = useCallback((event: EventItem) => {
+  const onSelectFromMap = useCallback((event: EventItem) => {
+    setSelected(event)
+    setTab('list')
+  }, [])
+
+  const onSelectFromList = useCallback((event: EventItem) => {
     setSelected(event)
   }, [])
 
   return (
     <View className="flex-1" style={{ backgroundColor: theme.bg }}>
       <StatusBar style="dark" />
-      <InteractiveHeatmap events={events} onSelectEvent={onSelectEvent} />
-      <SafeAreaView
-        pointerEvents="box-none"
-        className="absolute left-0 right-0 top-0 px-4 pt-2"
+
+      <View
+        style={{ flex: 1, display: tab === 'map' ? 'flex' : 'none' }}
+        pointerEvents={tab === 'map' ? 'auto' : 'none'}
       >
-        <View className="flex-row items-center justify-between">
-          <Pressable
-            onPress={() => setSettingsOpen(true)}
-            className="rounded-full px-3 py-2"
+        <InteractiveHeatmap
+          events={events}
+          selectedEventId={selected?.id}
+          onSelectEvent={onSelectFromMap}
+        />
+        <SafeAreaView
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            paddingHorizontal: 16,
+            paddingTop: 8,
+          }}
+        >
+          <View
             style={{
+              alignSelf: 'center',
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              borderRadius: 999,
               backgroundColor: theme.chrome,
               borderWidth: 1,
               borderColor: theme.border,
@@ -84,49 +104,38 @@ function HomeScreen() {
           >
             <Text
               style={{
-                fontFamily: fonts.uiSemiBold,
-                fontSize: 12,
+                fontFamily: fonts.display,
+                fontSize: 18,
                 color: theme.textPrimary,
               }}
             >
-              Settings
+              LuMap
             </Text>
-          </Pressable>
-          <Text
-            style={{
-              fontFamily: fonts.display,
-              fontSize: 20,
-              color: theme.textPrimary,
-            }}
-          >
-            LuMap
-          </Text>
-          <View style={{ width: 72 }} />
-        </View>
-      </SafeAreaView>
-      <LiveRadarFeed
-        events={events}
-        selectedEventId={selected?.id}
-        onSelectEvent={onSelectEvent}
-      />
+          </View>
+        </SafeAreaView>
+      </View>
 
-      <Modal
-        visible={settingsOpen}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setSettingsOpen(false)}
-      >
-        <SafeAreaProvider>
-          <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }}>
-            <SettingsPanel
-              onClose={() => setSettingsOpen(false)}
-              onDataChanged={() => {
-                void refresh()
-              }}
-            />
-          </SafeAreaView>
-        </SafeAreaProvider>
-      </Modal>
+      {tab === 'list' ? (
+        <LiveRadarFeed
+          events={events}
+          selectedEventId={selected?.id}
+          onSelectEvent={onSelectFromList}
+          bottomInset={88}
+        />
+      ) : null}
+
+      {tab === 'settings' ? (
+        <View style={{ flex: 1, backgroundColor: theme.bg }}>
+          <SettingsPanel
+            bottomInset={88}
+            onDataChanged={() => {
+              void refresh()
+            }}
+          />
+        </View>
+      ) : null}
+
+      <TabBar active={tab} onChange={setTab} />
     </View>
   )
 }
@@ -159,11 +168,9 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <BottomSheetModalProvider>
-          <AppThemeProvider>
-            <HomeScreen />
-          </AppThemeProvider>
-        </BottomSheetModalProvider>
+        <AppThemeProvider>
+          <HomeScreen />
+        </AppThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   )

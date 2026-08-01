@@ -44,7 +44,7 @@ function splitFullName(full: string): { first: string; last: string } {
 }
 
 /** Connections.csv or Invitations.csv → contact rows */
-function rowsToContacts(rows: CsvRow[], selfNameKey: string) {
+function rowsToContacts(rows: CsvRow[], selfNameKeys: Set<string>) {
   const seen = new Set<string>()
   const out: Array<{
     first_name: string | null
@@ -96,7 +96,7 @@ function rowsToContacts(rows: CsvRow[], selfNameKey: string) {
     }
 
     const nameKey = normalizeNameKey(fullName)
-    if (!nameKey || nameKey === selfNameKey || seen.has(nameKey)) continue
+    if (!nameKey || selfNameKeys.has(nameKey) || seen.has(nameKey)) continue
     seen.add(nameKey)
 
     const names = first || last
@@ -183,6 +183,7 @@ Deno.serve(async (req) => {
     const contentType = req.headers.get('content-type') ?? ''
     let csvText = ''
     let selfName = ''
+    let bodySelfNames: string[] = []
     if (contentType.includes('multipart/form-data')) {
       const form = await req.formData()
       const file = form.get('file')
@@ -192,10 +193,26 @@ Deno.serve(async (req) => {
       csvText = await file.text()
       const maybeSelf = form.get('selfName')
       if (typeof maybeSelf === 'string') selfName = maybeSelf
+      const maybeNames = form.get('selfNames')
+      if (typeof maybeNames === 'string' && maybeNames.trim()) {
+        try {
+          const parsed = JSON.parse(maybeNames)
+          if (Array.isArray(parsed)) {
+            bodySelfNames = parsed.filter((n): n is string => typeof n === 'string')
+          }
+        } catch {
+          bodySelfNames = maybeNames.split(',').map((s) => s.trim()).filter(Boolean)
+        }
+      }
     } else {
       const body = await req.json()
       csvText = body.csvText ?? body.csv ?? ''
       selfName = typeof body.selfName === 'string' ? body.selfName : ''
+      if (Array.isArray(body.selfNames)) {
+        bodySelfNames = body.selfNames.filter(
+          (n: unknown): n is string => typeof n === 'string',
+        )
+      }
     }
 
     if (!csvText.trim()) {
@@ -205,27 +222,54 @@ Deno.serve(async (req) => {
     const rows = parseCsv(csvText)
     const admin = createClient(supabaseUrl, serviceKey)
 
-    // Detect self so Invitations "From" = Robin isn't imported as a contact
-    let selfNameKey = normalizeNameKey(selfName)
-    if (!selfNameKey) {
-      const fromCounts = new Map<string, number>()
-      for (const row of rows) {
-        const from = normalizeNameKey(pick(row, ['From']))
-        if (from) fromCounts.set(from, (fromCounts.get(from) ?? 0) + 1)
+    // Detect self so Invitations "From"/"To" = user isn't imported as a contact
+    const selfKeys = new Set<string>()
+    const addSelf = (raw: string) => {
+      const key = normalizeNameKey(raw)
+      if (key) selfKeys.add(key)
+    }
+    addSelf(selfName)
+    if (Array.isArray(bodySelfNames)) {
+      for (const n of bodySelfNames) {
+        if (typeof n === 'string') addSelf(n)
       }
-      let best = ''
-      let bestN = 0
-      for (const [k, n] of fromCounts) {
-        if (n > bestN) {
-          best = k
-          bestN = n
-        }
-      }
-      // Only treat as self if clearly dominant (OUTGOING-heavy export)
-      if (bestN >= 3) selfNameKey = best
     }
 
-    const contacts = rowsToContacts(rows, selfNameKey)
+    if (selfKeys.size === 0) {
+      let incoming = 0
+      let outgoing = 0
+      const fromCounts = new Map<string, number>()
+      const toCounts = new Map<string, number>()
+      for (const row of rows) {
+        const from = normalizeNameKey(pick(row, ['From']))
+        const to = normalizeNameKey(pick(row, ['To']))
+        const direction = pick(row, ['Direction']).toUpperCase()
+        if (from) fromCounts.set(from, (fromCounts.get(from) ?? 0) + 1)
+        if (to) toCounts.set(to, (toCounts.get(to) ?? 0) + 1)
+        if (direction === 'INCOMING') incoming += 1
+        else if (direction === 'OUTGOING') outgoing += 1
+      }
+      const pickDominant = (counts: Map<string, number>) => {
+        let best = ''
+        let bestN = 0
+        for (const [k, n] of counts) {
+          if (n > bestN) {
+            best = k
+            bestN = n
+          }
+        }
+        return bestN >= 3 ? best : ''
+      }
+      // OUTGOING-heavy → self is From; INCOMING-heavy → self is To
+      const inferred =
+        outgoing >= incoming
+          ? pickDominant(fromCounts) || pickDominant(toCounts)
+          : pickDominant(toCounts) || pickDominant(fromCounts)
+      if (inferred) selfKeys.add(inferred)
+    }
+
+    const selfNameKey = [...selfKeys][0] ?? ''
+    const contacts = rowsToContacts(rows, selfKeys)
     const payload = contacts.map((c) => ({ ...c, user_id: user.id }))
 
     // Replace previous import for this user
@@ -260,6 +304,7 @@ Deno.serve(async (req) => {
     return jsonResponse({
       imported: payload.length,
       overlaps_updated: matchCount ?? 0,
+      excluded_self: selfNameKey || null,
     })
   } catch (error) {
     console.error(error)

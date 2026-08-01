@@ -4,8 +4,7 @@ Expo / React Native app: öffentliche Luma-Events (+ LinkedIn-Overlaps) auf eine
 
 ## Data pipeline (v1)
 
-- **Luma Discover:** Edge Function `discover-luma-events` — öffentliche Events (z. B. Berlin), auch ohne Anmeldung
-- **Luma Detail:** Edge Function `fetch-luma-event` — Event-Metadaten + Guest-Namen nur wenn die Liste öffentlich ist
+- **Luma Sync:** Edge Function `discover-luma-events` — Luma-Profil verknüpfen + Stadt/Interessen → öffentliche Events (ohne Einzel-URL-Upload)
 - **LinkedIn:** Edge Function `import-linkedin-csv` — Connections/Invitations.csv (kein Scraping)
 - **Overlaps:** SQL `refresh_event_overlaps` + Function `match-overlaps` (Name-Match)
 
@@ -20,7 +19,7 @@ cp .env.example .env.local
 npx expo start
 ```
 
-Beim Öffnen lädt die App öffentliche Berlin-Events. Optional in **Settings**: LinkedIn-CSV + einzelne Luma-URL.
+Beim Öffnen sync’t die App öffentliche Events über verknüpftes Luma-Profil + Interessen. In **Settings**: Profil-Link, Stadt, Interessen; optional LinkedIn-CSV.
 
 iOS:
 

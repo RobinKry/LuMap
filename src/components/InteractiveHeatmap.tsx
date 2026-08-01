@@ -1,89 +1,147 @@
 import Mapbox, {
   Camera,
-  CircleLayer,
   LocationPuck,
   MapView,
-  ShapeSource,
+  MarkerView,
   locationManager,
 } from '@rnmapbox/maps'
+import { Image } from 'expo-image'
 import { useEffect, useMemo, useRef } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAppTheme } from '../context/AppModeContext'
+import { fonts, LM } from '../theme/tokens'
 import type { EventItem } from '../types'
 import { getBlurredCoordinates } from '../utils/privacyBlur'
 
 const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? ''
-if (!mapboxToken) {
-  console.warn(
-    '[map] EXPO_PUBLIC_MAPBOX_TOKEN missing — set pk.* in .env.local and restart Metro',
-  )
-}
 Mapbox.setAccessToken(mapboxToken)
 
 const BERLIN: [number, number] = [13.405, 52.52]
+const MAX_PINS = 48
+const PIN_SIZE = 40
 
 type Props = {
   events: EventItem[]
+  selectedEventId?: string | null
   onSelectEvent: (event: EventItem) => void
 }
 
-type FeatureProps = {
-  id: string
-  kind: 'residential' | 'public'
-  accent: string
+type PinModel = {
+  event: EventItem
+  coordinate: [number, number]
+  logoUrl: string | null
+  initial: string
 }
 
-function toFeatureCollection(events: EventItem[], accent: string) {
-  const features = events
-    .filter(
-      (event) =>
-        event.latitude != null &&
-        event.longitude != null &&
-        Number.isFinite(event.latitude) &&
-        Number.isFinite(event.longitude),
-    )
-    .map((event) => {
-      const isResidentialBlur = event.is_residential
-      const coords = isResidentialBlur
-        ? getBlurredCoordinates(event.latitude!, event.longitude!)
-        : { latitude: event.latitude!, longitude: event.longitude! }
+function buildPins(events: EventItem[]): PinModel[] {
+  const ranked = [...events].sort((a, b) => {
+    const am = a.linkedin_match_count ?? 0
+    const bm = b.linkedin_match_count ?? 0
+    if (bm !== am) return bm - am
+    return 0
+  })
+  const pins: PinModel[] = []
+  for (const event of ranked) {
+    if (
+      event.latitude == null ||
+      event.longitude == null ||
+      !Number.isFinite(event.latitude) ||
+      !Number.isFinite(event.longitude)
+    ) {
+      continue
+    }
+    const coords = event.is_residential
+      ? getBlurredCoordinates(event.latitude, event.longitude)
+      : { latitude: event.latitude, longitude: event.longitude }
 
-      return {
-        type: 'Feature' as const,
-        id: event.id,
-        properties: {
-          id: event.id,
-          kind: isResidentialBlur ? 'residential' : 'public',
-          accent,
-        } satisfies FeatureProps,
-        geometry: {
-          type: 'Point' as const,
-          coordinates: [coords.longitude, coords.latitude],
-        },
-      }
+    const logoUrl = event.cover_url?.trim() || null
+    const initial = (event.host_name || event.title || '?')
+      .trim()
+      .charAt(0)
+      .toUpperCase()
+
+    pins.push({
+      event,
+      coordinate: [coords.longitude, coords.latitude],
+      logoUrl,
+      initial: initial || '?',
     })
-
-  return {
-    type: 'FeatureCollection' as const,
-    features,
+    if (pins.length >= MAX_PINS) break
   }
+  return pins
 }
 
-export function InteractiveHeatmap({ events, onSelectEvent }: Props) {
+function EventLogoPin({
+  pin,
+  selected,
+  onPress,
+}: {
+  pin: PinModel
+  selected: boolean
+  onPress: () => void
+}) {
+  const matchCount = pin.event.linkedin_match_count
+  const hasMatches =
+    typeof matchCount === 'number' && Number.isFinite(matchCount) && matchCount > 0
+  const attendeeCount = pin.event.attendee_count
+  const showAttendees =
+    !hasMatches &&
+    typeof attendeeCount === 'number' &&
+    Number.isFinite(attendeeCount)
+  const badgeValue = hasMatches ? matchCount : showAttendees ? attendeeCount : null
+
+  return (
+    <Pressable onPress={onPress} hitSlop={6}>
+      <View style={styles.pinWrap}>
+        <View
+          style={[
+            styles.pinOuter,
+            selected && styles.pinSelected,
+            pin.event.is_residential && styles.pinResidential,
+            hasMatches && styles.pinHasMatch,
+          ]}
+        >
+          {pin.logoUrl ? (
+            <Image
+              source={{ uri: pin.logoUrl }}
+              style={styles.pinImage}
+              contentFit="cover"
+              transition={120}
+            />
+          ) : (
+            <View style={styles.pinFallback}>
+              <Text style={styles.pinInitial}>{pin.initial}</Text>
+            </View>
+          )}
+        </View>
+        {badgeValue != null ? (
+          <View
+            style={[
+              styles.countBadge,
+              hasMatches && styles.matchBadge,
+              selected && styles.countBadgeSelected,
+            ]}
+          >
+            <Text style={styles.countBadgeText} numberOfLines={1}>
+              {badgeValue}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+    </Pressable>
+  )
+}
+
+export function InteractiveHeatmap({
+  events,
+  selectedEventId,
+  onSelectEvent,
+}: Props) {
   const { theme } = useAppTheme()
   const cameraRef = useRef<Camera>(null)
   const didCenterOnUser = useRef(false)
 
-  const collection = useMemo(
-    () => toFeatureCollection(events, theme.accent),
-    [events, theme.accent],
-  )
-
-  const byId = useMemo(() => {
-    const map = new Map<string, EventItem>()
-    for (const event of events) map.set(event.id, event)
-    return map
-  }, [events])
+  const pins = useMemo(() => buildPins(events), [events])
 
   useEffect(() => {
     let cancelled = false
@@ -148,78 +206,27 @@ export function InteractiveHeatmap({ events, onSelectEvent }: Props) {
           puckBearingEnabled
           pulsing={{
             isEnabled: true,
-            color: theme.accent,
+            color: LM.mint300,
             radius: 'accuracy',
           }}
         />
 
-        <ShapeSource
-          id="events-residential"
-          shape={{
-            type: 'FeatureCollection',
-            features: collection.features.filter(
-              (f) => f.properties.kind === 'residential',
-            ),
-          }}
-          onPress={(e) => {
-            const id = e.features?.[0]?.properties?.id as string | undefined
-            const event = id ? byId.get(id) : undefined
-            if (event) onSelectEvent(event)
-          }}
-        >
-          <CircleLayer
-            id="residential-glow-outer"
-            style={{
-              circleRadius: 42,
-              circleColor: theme.accent,
-              circleOpacity: 0.12,
-              circleBlur: 0.8,
-            }}
-          />
-          <CircleLayer
-            id="residential-glow-inner"
-            style={{
-              circleRadius: 22,
-              circleColor: theme.accent,
-              circleOpacity: 0.28,
-              circleBlur: 0.4,
-            }}
-          />
-        </ShapeSource>
-
-        <ShapeSource
-          id="events-public"
-          shape={{
-            type: 'FeatureCollection',
-            features: collection.features.filter(
-              (f) => f.properties.kind === 'public',
-            ),
-          }}
-          onPress={(e) => {
-            const id = e.features?.[0]?.properties?.id as string | undefined
-            const event = id ? byId.get(id) : undefined
-            if (event) onSelectEvent(event)
-          }}
-        >
-          <CircleLayer
-            id="public-pulse-halo"
-            style={{
-              circleRadius: 16,
-              circleColor: theme.accent,
-              circleOpacity: 0.22,
-            }}
-          />
-          <CircleLayer
-            id="public-pulse-core"
-            style={{
-              circleRadius: 7,
-              circleColor: theme.accent,
-              circleStrokeWidth: 2,
-              circleStrokeColor: '#FFFFFF',
-              circleOpacity: 0.95,
-            }}
-          />
-        </ShapeSource>
+        {pins.map((pin) => (
+          <MarkerView
+            key={pin.event.id}
+            coordinate={pin.coordinate}
+            allowOverlap
+            allowOverlapWithPuck
+            anchor={{ x: 0.5, y: 0.5 }}
+            isSelected={selectedEventId === pin.event.id}
+          >
+            <EventLogoPin
+              pin={pin}
+              selected={selectedEventId === pin.event.id}
+              onPress={() => onSelectEvent(pin.event)}
+            />
+          </MarkerView>
+        ))}
       </MapView>
     </View>
   )
@@ -227,4 +234,73 @@ export function InteractiveHeatmap({ events, onSelectEvent }: Props) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  pinWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pinOuter: {
+    width: PIN_SIZE,
+    height: PIN_SIZE,
+    borderRadius: PIN_SIZE / 2,
+    overflow: 'hidden',
+    backgroundColor: LM.lilac100,
+    borderWidth: 2.5,
+    borderColor: '#FFFFFF',
+    shadowColor: LM.ink900,
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  pinSelected: {
+    borderColor: LM.lilac500,
+    borderWidth: 3,
+    transform: [{ scale: 1.08 }],
+  },
+  pinHasMatch: {
+    borderColor: LM.linkedin,
+  },
+  pinResidential: {
+    opacity: 0.88,
+    borderStyle: 'dashed',
+  },
+  pinImage: {
+    width: '100%',
+    height: '100%',
+  },
+  pinFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: LM.lilac500,
+  },
+  pinInitial: {
+    fontFamily: fonts.display,
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  countBadge: {
+    position: 'absolute',
+    right: -6,
+    bottom: -4,
+    minWidth: 20,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: LM.ink900,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+  },
+  matchBadge: {
+    backgroundColor: LM.linkedin,
+  },
+  countBadgeSelected: {
+    backgroundColor: LM.lilac500,
+  },
+  countBadgeText: {
+    fontFamily: fonts.uiBold,
+    fontSize: 10,
+    color: '#FFFFFF',
+  },
 })

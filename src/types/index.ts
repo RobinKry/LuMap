@@ -6,6 +6,14 @@ export interface EventAttendeePreview {
   id: string
   display_name: string
   avatar_url: string | null
+  /** LinkedIn contact shared-event count across synced events */
+  shared_events?: number
+}
+
+export interface MatchPersonPreview {
+  full_name: string
+  name_key?: string
+  shared_events: number
 }
 
 export interface EventItem {
@@ -28,6 +36,8 @@ export interface EventItem {
   guest_list_public?: boolean
   linkedin_match_count?: number
   match_preview?: string[]
+  /** Matched LinkedIn people with cross-event shared counts */
+  match_people?: MatchPersonPreview[]
   /** Public guest list when available */
   guests?: EventAttendeePreview[]
 }
@@ -79,4 +89,11 @@ export interface EventOverlapRow {
   event_id: string
   linkedin_match_count: number
   match_preview: string[] | null
+  match_details?: MatchPersonPreview[] | null
+}
+
+export interface ContactSharedEventRow {
+  full_name: string
+  name_key: string
+  shared_events: number
 }

@@ -1,8 +1,8 @@
-import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet'
-import { forwardRef, useMemo } from 'react'
-import { Text, View } from 'react-native'
+import { useEffect, useRef } from 'react'
+import { FlatList, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAppTheme } from '../context/AppModeContext'
-import { fonts, LM } from '../theme/tokens'
+import { fonts } from '../theme/tokens'
 import type { EventItem } from '../types'
 import { EventCard } from './EventCard'
 
@@ -10,72 +10,107 @@ type Props = {
   events: EventItem[]
   selectedEventId?: string | null
   onSelectEvent: (event: EventItem) => void
+  /** Extra bottom padding so content clears the glass tab bar. */
+  bottomInset?: number
 }
 
-export const LiveRadarFeed = forwardRef<BottomSheet, Props>(
-  function LiveRadarFeed({ events, selectedEventId, onSelectEvent }, ref) {
-    const { theme } = useAppTheme()
-    const snapPoints = useMemo(() => ['18%', '42%', '82%'], [])
+export function LiveRadarFeed({
+  events,
+  selectedEventId,
+  onSelectEvent,
+  bottomInset = 100,
+}: Props) {
+  const { theme } = useAppTheme()
+  const insets = useSafeAreaInsets()
+  const listRef = useRef<FlatList<EventItem>>(null)
 
-    return (
-      <BottomSheet
-        ref={ref}
-        index={1}
-        snapPoints={snapPoints}
-        backgroundStyle={{
-          backgroundColor: theme.sheetBg,
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
+  useEffect(() => {
+    if (!selectedEventId || events.length === 0) return
+    const index = events.findIndex((e) => e.id === selectedEventId)
+    if (index < 0) return
+    const handle = requestAnimationFrame(() => {
+      try {
+        listRef.current?.scrollToIndex({
+          index,
+          animated: true,
+          viewPosition: 0.15,
+        })
+      } catch {
+        listRef.current?.scrollToOffset({ offset: Math.max(0, index * 280), animated: true })
+      }
+    })
+    return () => cancelAnimationFrame(handle)
+  }, [selectedEventId, events])
+
+  return (
+    <View style={{ flex: 1, backgroundColor: theme.bg }}>
+      <View
+        style={{
+          paddingTop: insets.top + 8,
+          paddingHorizontal: 20,
+          paddingBottom: 12,
         }}
-        handleIndicatorStyle={{ backgroundColor: LM.alpha14, width: 40 }}
       >
-        <View className="px-4 pb-2">
-          <Text
-            style={{
-              fontFamily: fonts.display,
-              fontSize: 18,
-              color: theme.textPrimary,
-            }}
-          >
-            Live Radar
-          </Text>
-          <Text
-            style={{
-              fontFamily: fonts.ui,
-              fontSize: 12,
-              color: theme.textMuted,
-            }}
-          >
-            {events.length} events
-          </Text>
-        </View>
+        <Text
+          style={{
+            fontFamily: fonts.display,
+            fontSize: 28,
+            color: theme.textPrimary,
+          }}
+        >
+          Events
+        </Text>
+        <Text
+          style={{
+            marginTop: 4,
+            fontFamily: fonts.ui,
+            fontSize: 13,
+            color: theme.textMuted,
+          }}
+        >
+          {events.length} in der Liste
+        </Text>
+      </View>
 
-        <BottomSheetFlatList
-          data={events}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
-          ListEmptyComponent={
-            <Text
-              className="mt-6 text-center"
-              style={{
-                fontFamily: fonts.ui,
-                fontSize: 14,
-                color: theme.textMuted,
-              }}
-            >
-              Noch keine Events.{'\n'}Öffentliche Luma-Events in Berlin werden
-              beim Öffnen geladen — oder Settings → Luma syncen.
-            </Text>
-          }
-          renderItem={({ item }) => (
-            <EventCard
-              event={item}
-              selected={item.id === selectedEventId}
-              onSelect={() => onSelectEvent(item)}
-            />
-          )}
-        />
-      </BottomSheet>
-    )
-  },
-)
+      <FlatList
+        ref={listRef}
+        data={events}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingBottom: bottomInset + insets.bottom,
+          flexGrow: 1,
+        }}
+        onScrollToIndexFailed={(info) => {
+          listRef.current?.scrollToOffset({
+            offset: Math.max(0, info.index * 280),
+            animated: true,
+          })
+        }}
+        ListEmptyComponent={
+          <Text
+            style={{
+              marginTop: 48,
+              textAlign: 'center',
+              fontFamily: fonts.ui,
+              fontSize: 14,
+              lineHeight: 22,
+              color: theme.textMuted,
+              paddingHorizontal: 24,
+            }}
+          >
+            Noch keine Events.{'\n'}Settings → Luma-Profil verknüpfen und
+            Interessen wählen.
+          </Text>
+        }
+        renderItem={({ item }) => (
+          <EventCard
+            event={item}
+            selected={item.id === selectedEventId}
+            onSelect={() => onSelectEvent(item)}
+          />
+        )}
+      />
+    </View>
+  )
+}

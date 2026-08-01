@@ -199,6 +199,14 @@ function parseHtmlFallback(html: string, slug: string): LumaPayload {
     }
   }
 
+  const guestCountMatch = html.match(/"guest_count"\s*:\s*(\d+)/)
+  const acceptedCountMatch = html.match(/"accepted_count"\s*:\s*(\d+)/)
+  const guestCountFromJson = guestCountMatch
+    ? Number(guestCountMatch[1])
+    : acceptedCountMatch
+      ? Number(acceptedCountMatch[1])
+      : undefined
+
   return {
     name: title.replace(/\s+\|\s*Luma.*/i, '').trim(),
     url: eventUrlFromSlug(slug),
@@ -207,7 +215,8 @@ function parseHtmlFallback(html: string, slug: string): LumaPayload {
       ? description.replace(/&amp;/g, '&').replace(/&#39;/g, "'").trim()
       : undefined,
     show_guest_list: showGuestList && guests.length > 0,
-    guest_count: guests.length || undefined,
+    guest_count:
+      guestCountFromJson ?? (guests.length > 0 ? guests.length : undefined),
     guests: showGuestList ? guests : [],
   }
 }
