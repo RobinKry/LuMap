@@ -15,14 +15,31 @@ ci_prepare_path() {
   export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/bin:$PATH"
 
   if ! command -v node >/dev/null 2>&1; then
+    if ! command -v brew >/dev/null 2>&1; then
+      echo "ci: FEHLER — weder node noch brew auf PATH"
+      exit 127
+    fi
     echo "ci: installing node via Homebrew"
     brew install node@22 || brew install node
     brew link --force --overwrite node@22 2>/dev/null || true
   fi
 
   if ! command -v pod >/dev/null 2>&1; then
+    if ! command -v brew >/dev/null 2>&1; then
+      echo "ci: FEHLER — weder pod noch brew auf PATH"
+      exit 127
+    fi
     echo "ci: installing cocoapods via Homebrew"
     brew install cocoapods
+  fi
+
+  if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+    echo "ci: FEHLER — node/npm fehlt nach setup"
+    exit 127
+  fi
+  if ! command -v pod >/dev/null 2>&1; then
+    echo "ci: FEHLER — pod fehlt nach setup"
+    exit 127
   fi
 
   echo "ci: node=$(command -v node) $(node -v 2>/dev/null || true)"
@@ -117,6 +134,11 @@ done
 exec "\$REAL_XB" "\${ARGS[@]}"
 WRAP
   chmod +x "$dest"
+}
+
+# Back-compat alias (older post_clone called this name → exit 127).
+ci_install_xcodebuild_workspace_shim() {
+  ci_hijack_xcodebuild "${1:-rewrite}"
 }
 
 # Install wrapper so Cloud's absolute/PATH xcodebuild cannot archive via .xcodeproj.
