@@ -21,13 +21,130 @@ ci_log_env() {
   echo "ci: ---- end env ----"
 }
 
+ci_scripts_dir() {
+  cd "$(dirname "${BASH_SOURCE[0]}")" && pwd
+}
+
+ci_shim_bin_dir() {
+  echo "$(ci_scripts_dir)/bin"
+}
+
+# Prepend the LuMap-only xcodebuild/xcrun shims and keep DEVELOPER_DIR on real Xcode.
+# Also force CI_XCODE_PROJECT to the CocoaPods workspace when ASC still has .xcodeproj.
+ci_install_xcodebuild_shim() {
+  local root="$1"
+  local bin_dir shim xcrun_shim workspace_abs
+  bin_dir="$(ci_shim_bin_dir)"
+  shim="$bin_dir/xcodebuild"
+  xcrun_shim="$bin_dir/xcrun"
+  workspace_abs="$root/ios/LuMap.xcworkspace"
+
+  if [ ! -x "$shim" ]; then
+    echo "error: missing executable shim at $shim"
+    exit 127
+  fi
+  chmod +x "$shim" "$xcrun_shim" 2>/dev/null || true
+
+  # Remember ASC's original value once (before we override it).
+  if [ -z "${CI_XCODE_PROJECT_ASC_ORIGINAL:-}" ]; then
+    export CI_XCODE_PROJECT_ASC_ORIGINAL="${CI_XCODE_PROJECT:-unset}"
+  fi
+
+  mkdir -p "$HOME/bin" 2>/dev/null || true
+  # Duplicate onto $HOME/bin in case Cloud's later step only inherits HOME paths.
+  cp -f "$shim" "$HOME/bin/xcodebuild" 2>/dev/null || true
+  cp -f "$xcrun_shim" "$HOME/bin/xcrun" 2>/dev/null || true
+  chmod +x "$HOME/bin/xcodebuild" "$HOME/bin/xcrun" 2>/dev/null || true
+
+  export PATH="$bin_dir:$HOME/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+  local real_dev="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+  if [ ! -d "$real_dev" ]; then
+    real_dev=/Applications/Xcode.app/Contents/Developer
+  fi
+  # Never point local machines at a FakeDeveloper leftover.
+  case "$real_dev" in
+    *FakeDeveloper* | *LuMapXcodeShimDeveloper*)
+      real_dev=/Applications/Xcode.app/Contents/Developer
+      ;;
+  esac
+
+  # DEVELOPER_DIR overlay only on Xcode Cloud — avoids breaking local xcode-select.
+  if [ -n "${CI:-}" ] || [ -n "${CI_XCODE_CLOUD:-}" ] || [ -n "${CI_PRIMARY_REPOSITORY_PATH:-}" ]; then
+    local overlay item base
+    overlay="${HOME}/LuMapXcodeShimDeveloper"
+    if [ -d "$real_dev" ]; then
+      mkdir -p "$overlay/usr/bin"
+      for item in "$real_dev"/*; do
+        base="$(basename "$item")"
+        [ "$base" = "usr" ] && continue
+        ln -sfn "$item" "$overlay/$base"
+      done
+      mkdir -p "$overlay/usr"
+      for item in "$real_dev/usr"/*; do
+        base="$(basename "$item")"
+        [ "$base" = "bin" ] && continue
+        ln -sfn "$item" "$overlay/usr/$base"
+      done
+      mkdir -p "$overlay/usr/bin"
+      for item in "$real_dev/usr/bin"/*; do
+        base="$(basename "$item")"
+        if [ "$base" = "xcodebuild" ] || [ "$base" = "xcrun" ]; then
+          continue
+        fi
+        ln -sfn "$item" "$overlay/usr/bin/$base"
+      done
+      ln -sfn "$shim" "$overlay/usr/bin/xcodebuild"
+      ln -sfn "$xcrun_shim" "$overlay/usr/bin/xcrun"
+      export DEVELOPER_DIR="$overlay"
+      echo "ci: DEVELOPER_DIR overlay=$DEVELOPER_DIR (xcodebuild/xcrun → shim)"
+    fi
+  else
+    export DEVELOPER_DIR="$real_dev"
+    echo "ci: DEVELOPER_DIR=$DEVELOPER_DIR (local — no overlay)"
+  fi
+
+  if [ -d "$workspace_abs" ]; then
+    export CI_XCODE_PROJECT="$workspace_abs"
+    echo "ci: exported CI_XCODE_PROJECT=$CI_XCODE_PROJECT (ASC original=${CI_XCODE_PROJECT_ASC_ORIGINAL:-unset})"
+  else
+    echo "ci: WARN — workspace missing at $workspace_abs (pod install may not have run yet)"
+  fi
+
+  # Persist PATH / DEVELOPER_DIR for shells some Cloud images spawn for xcodebuild.
+  if [ -n "${CI:-}" ] || [ -n "${CI_XCODE_CLOUD:-}" ] || [ -n "${CI_PRIMARY_REPOSITORY_PATH:-}" ]; then
+    for rc in "$HOME/.zshenv" "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.profile"; do
+      touch "$rc" 2>/dev/null || continue
+      if ! grep -q 'LuMap ci_scripts/bin xcodebuild shim' "$rc" 2>/dev/null; then
+        {
+          echo ""
+          echo "# LuMap ci_scripts/bin xcodebuild shim"
+          echo "export PATH=\"$bin_dir:\$HOME/bin:/opt/homebrew/bin:/usr/local/bin:\$PATH\""
+          echo "export DEVELOPER_DIR=\"${DEVELOPER_DIR:-$real_dev}\""
+          if [ -d "$workspace_abs" ]; then
+            echo "export CI_XCODE_PROJECT=\"$workspace_abs\""
+          fi
+        } >> "$rc"
+      fi
+    done
+  fi
+
+  echo "ci: xcodebuild shim ready which=$(command -v xcodebuild)"
+  echo "ci: xcrun shim ready which=$(command -v xcrun)"
+  echo "ci: DEVELOPER_DIR=${DEVELOPER_DIR:-unset}"
+}
+
 ci_prepare_path() {
   export HOMEBREW_NO_AUTO_UPDATE=1
   export LANG=en_US.UTF-8
   export LC_ALL=en_US.UTF-8
   export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/bin:$PATH"
-  # Never inherit local hijack leftovers into Cloud or subsequent steps.
-  unset DEVELOPER_DIR 2>/dev/null || true
+  # Drop leftover local FakeDeveloper paths from previous experiments.
+  case "${DEVELOPER_DIR:-}" in
+    *XcodeCloudFakeDeveloper* | *FakeDeveloper*)
+      unset DEVELOPER_DIR 2>/dev/null || true
+      ;;
+  esac
   if [ -d /Applications/Xcode.app/Contents/Developer ]; then
     export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
   fi
@@ -176,30 +293,40 @@ ci_write_workspace_diag() {
   {
     echo "status=${status_line}"
     echo "CI_XCODE_PROJECT=${CI_XCODE_PROJECT:-unset}"
+    echo "CI_XCODE_PROJECT_ASC_ORIGINAL=${CI_XCODE_PROJECT_ASC_ORIGINAL:-unset}"
     echo "CI_XCODE_SCHEME=${CI_XCODE_SCHEME:-unset}"
     echo "CI_WORKSPACE=${CI_WORKSPACE:-unset}"
     echo "CI_XCODEBUILD_ACTION=${CI_XCODEBUILD_ACTION:-unset}"
+    echo "shim=$(ci_shim_bin_dir)/xcodebuild"
     echo "expected=ios/LuMap.xcworkspace"
     date -u +"utc=%Y-%m-%dT%H:%M:%SZ"
   } > "$diag_dir/CI_XCODE_PROJECT.txt"
   echo "ci: wrote $diag_dir/CI_XCODE_PROJECT.txt (status=${status_line})"
   # Repeat on its own line — easy to grep in Archive → Logs.
-  echo "ci: DIAG CI_XCODE_PROJECT=${CI_XCODE_PROJECT:-unset}"
+  echo "ci: DIAG CI_XCODE_PROJECT=${CI_XCODE_PROJECT:-unset} ASC_ORIGINAL=${CI_XCODE_PROJECT_ASC_ORIGINAL:-unset}"
 }
 
 ci_print_workspace_fix_message() {
   local project="${CI_XCODE_PROJECT:-}"
-  # Xcode Cloud surfaces lines starting with "error:" as the Archive issue.
-  echo "error: Xcode Cloud Workflow muss ios/LuMap.xcworkspace nutzen — aktuell CI_XCODE_PROJECT='${project:-unset}' (nicht .xcodeproj). Scripts können ASC nicht überschreiben."
+  local severity="${1:-warn}"
+  if [ "$severity" = "error" ]; then
+    # Xcode Cloud surfaces lines starting with "error:" as the Archive issue.
+    echo "error: Xcode Cloud Workflow muss ios/LuMap.xcworkspace nutzen — aktuell CI_XCODE_PROJECT='${project:-unset}'."
+  else
+    echo "ci: WARN — ASC Workflow sollte ios/LuMap.xcworkspace nutzen — aktuell CI_XCODE_PROJECT='${project:-unset}'. xcodebuild-Shim schreibt LuMap.xcodeproj → LuMap.xcworkspace um."
+  fi
   cat <<'EOF'
 
 ================================================================================
-Xcode Cloud must build ios/LuMap.xcworkspace (not LuMap.xcodeproj)
+Xcode Cloud should build ios/LuMap.xcworkspace (not LuMap.xcodeproj)
 
 Expo / CocoaPods Archive requires the workspace. With only the .xcodeproj,
 Pods (Expo, react-native-maps, …) are skipped → "No such module 'Expo'".
 
-ci_scripts CANNOT change this. You must fix App Store Connect:
+This repo installs ios/ci_scripts/bin/xcodebuild which rewrites
+-project …/LuMap.xcodeproj → -workspace …/LuMap.xcworkspace when PATH is honored.
+
+Still set ASC correctly when you can:
 
   1. https://appstoreconnect.apple.com → Apps → LuMap → Xcode Cloud
   2. Workflow „Default“ → Edit Workflow → Environment
@@ -225,18 +352,45 @@ ci_warn_unless_workspace() {
   fi
   echo "ci: WARN — ASC still points at .xcodeproj; continuing so npm/pods still run."
   ci_write_workspace_diag "warn-xcodeproj"
-  ci_print_workspace_fix_message
+  ci_print_workspace_fix_message "warn"
   return 0
 }
 
-# Hard check for pre_xcodebuild / archive gate.
+# Archive gate: prefer ASC workspace; otherwise rely on the xcodebuild shim.
 ci_require_workspace_or_explain() {
+  local root="$1"
+  local shim asc_orig
+  shim="$(ci_shim_bin_dir)/xcodebuild"
+  asc_orig="${CI_XCODE_PROJECT_ASC_ORIGINAL:-${CI_XCODE_PROJECT:-}}"
+
+  # Already a workspace according to (possibly overridden) env.
   if ci_workspace_configured; then
-    ci_write_workspace_diag "ok-workspace"
+    case "$asc_orig" in
+      *LuMap.xcworkspace* | *.xcworkspace)
+        ci_write_workspace_diag "ok-workspace"
+        return 0
+        ;;
+      *)
+        # We overrode CI_XCODE_PROJECT ourselves — still need shim for Cloud's argv.
+        if [ -x "$shim" ] && [ -d "$root/ios/LuMap.xcworkspace" ]; then
+          echo "ci: ASC original was .xcodeproj (${asc_orig}) — shim + CI_XCODE_PROJECT override active."
+          ci_write_workspace_diag "shim-override"
+          ci_print_workspace_fix_message "warn"
+          return 0
+        fi
+        ;;
+    esac
+  fi
+
+  if [ -x "$shim" ] && [ -d "$root/ios/LuMap.xcworkspace" ]; then
+    echo "ci: ASC still has .xcodeproj — proceeding with xcodebuild shim (rewrite to workspace)."
+    ci_write_workspace_diag "shim-xcodeproj"
+    ci_print_workspace_fix_message "warn"
     return 0
   fi
-  echo "FATAL: refusing Archive against .xcodeproj (Build would hit No such module Expo)"
+
+  echo "FATAL: ASC points at .xcodeproj and xcodebuild shim/workspace unavailable"
   ci_write_workspace_diag "fatal-xcodeproj"
-  ci_print_workspace_fix_message
+  ci_print_workspace_fix_message "error"
   exit 1
 }

@@ -10,13 +10,17 @@ REPO_ROOT="$(ci_repo_root)"
 echo "ci_pre_xcodebuild: start repo=$REPO_ROOT"
 
 ci_prepare_path
+ci_install_xcodebuild_shim "$REPO_ROOT"
 ci_log_env
 
-# Soft warn early; hard fail after deps so logs still show npm/pod success.
+# Soft warn early; archive gate below allows shim when ASC still has .xcodeproj.
 ci_warn_unless_workspace
 
 ci_npm_install "$REPO_ROOT"
 ci_pod_install "$REPO_ROOT"
+
+# Ensure shim + CI_XCODE_PROJECT override see the fresh workspace path.
+ci_install_xcodebuild_shim "$REPO_ROOT"
 
 NODE_BINARY="$(command -v node)"
 echo "export NODE_BINARY=${NODE_BINARY}" > "$REPO_ROOT/ios/.xcode.env.local"
@@ -47,7 +51,9 @@ else:
     print("ci_pre_xcodebuild: explicit modules already set")
 PY
 
-# Archive gate: fail here (not in post_clone) if ASC still uses .xcodeproj.
-ci_require_workspace_or_explain
+# Gate: ASC workspace OK, or shim+workspace present → continue.
+ci_require_workspace_or_explain "$REPO_ROOT"
 
+echo "ci_pre_xcodebuild: which xcodebuild=$(command -v xcodebuild)"
+echo "ci_pre_xcodebuild: CI_XCODE_PROJECT=${CI_XCODE_PROJECT:-unset}"
 echo "ci_pre_xcodebuild: done"

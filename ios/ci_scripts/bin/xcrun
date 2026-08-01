@@ -1,0 +1,22 @@
+#!/bin/bash
+# Intercept `xcrun xcodebuild …` so the LuMap workspace shim still applies.
+set -euo pipefail
+
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+REAL_XCRUN=""
+if [ -x /usr/bin/xcrun ]; then
+  REAL_XCRUN=/usr/bin/xcrun
+elif [ -n "${DEVELOPER_DIR:-}" ] && [ -x "${DEVELOPER_DIR}/usr/bin/xcrun" ]; then
+  REAL_XCRUN="${DEVELOPER_DIR}/usr/bin/xcrun"
+fi
+if [ -z "$REAL_XCRUN" ]; then
+  echo "ci_xcrun_shim: error: real xcrun not found" >&2
+  exit 127
+fi
+
+if [ "${1:-}" = "xcodebuild" ]; then
+  shift
+  exec "$SELF_DIR/xcodebuild" "$@"
+fi
+
+exec "$REAL_XCRUN" "$@"

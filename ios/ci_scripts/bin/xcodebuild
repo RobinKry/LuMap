@@ -1,0 +1,116 @@
+#!/bin/bash
+# Xcode Cloud workaround: ASC often points at LuMap.xcodeproj, but Expo/CocoaPods
+# Archive requires LuMap.xcworkspace. Rewrite only LuMap.xcodeproj invocations.
+set -euo pipefail
+
+LOG_DIR="${CI_DERIVED_DATA_PATH:-${TMPDIR:-/tmp}}"
+LOG_FILE="${LOG_DIR%/}/ci_xcodebuild_shim.log"
+mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
+
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+REAL_XCODEBUILD=""
+
+# Prefer the real toolchain binary, never this shim.
+if [ -x /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild ]; then
+  REAL_XCODEBUILD=/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild
+elif [ -n "${DEVELOPER_DIR:-}" ] && [ -x "${DEVELOPER_DIR}/usr/bin/xcodebuild" ]; then
+  candidate="${DEVELOPER_DIR}/usr/bin/xcodebuild"
+  case "$candidate" in
+    "$SELF_DIR"/*) ;;
+    *) REAL_XCODEBUILD="$candidate" ;;
+  esac
+fi
+
+if [ -z "$REAL_XCODEBUILD" ]; then
+  while IFS= read -r candidate; do
+    [ -z "$candidate" ] && continue
+    case "$candidate" in
+      "$SELF_DIR"/xcodebuild) continue ;;
+    esac
+    if [ -x "$candidate" ]; then
+      REAL_XCODEBUILD="$candidate"
+      break
+    fi
+  done < <(type -a -p xcodebuild 2>/dev/null || true)
+fi
+
+if [ -z "$REAL_XCODEBUILD" ] || [ ! -x "$REAL_XCODEBUILD" ] || [ "$REAL_XCODEBUILD" = "$SELF_DIR/xcodebuild" ]; then
+  echo "ci_xcodebuild_shim: error: real xcodebuild not found" >&2
+  exit 127
+fi
+
+REPO_IOS=""
+SHIM_IOS="$(cd "$SELF_DIR/../.." && pwd)"
+if [ -d "$SHIM_IOS/LuMap.xcworkspace" ]; then
+  REPO_IOS="$SHIM_IOS"
+elif [ -n "${CI_PRIMARY_REPOSITORY_PATH:-}" ] && [ -d "${CI_PRIMARY_REPOSITORY_PATH}/ios/LuMap.xcworkspace" ]; then
+  REPO_IOS="${CI_PRIMARY_REPOSITORY_PATH}/ios"
+elif [ -n "${CI_WORKSPACE:-}" ] && [ -d "${CI_WORKSPACE}/ios/LuMap.xcworkspace" ]; then
+  REPO_IOS="${CI_WORKSPACE}/ios"
+fi
+
+WORKSPACE_PATH=""
+if [ -n "$REPO_IOS" ]; then
+  WORKSPACE_PATH="$REPO_IOS/LuMap.xcworkspace"
+fi
+
+args=("$@")
+rewrote=0
+new_args=()
+i=0
+while [ "$i" -lt "${#args[@]}" ]; do
+  a="${args[$i]}"
+  next=""
+  if [ $((i + 1)) -lt "${#args[@]}" ]; then
+    next="${args[$((i + 1))]}"
+  fi
+
+  if [ "$a" = "-project" ] && [ -n "$next" ]; then
+    if [ "$(basename "$next")" = "LuMap.xcodeproj" ] && [ -n "$WORKSPACE_PATH" ] && [ -d "$WORKSPACE_PATH" ]; then
+      new_args+=("-workspace" "$WORKSPACE_PATH")
+      i=$((i + 2))
+      rewrote=1
+      continue
+    fi
+  fi
+
+  case "$a" in
+    -project/*)
+      path="${a#-project/}"
+      if [ "$(basename "$path")" = "LuMap.xcodeproj" ] && [ -n "$WORKSPACE_PATH" ] && [ -d "$WORKSPACE_PATH" ]; then
+        new_args+=("-workspace" "$WORKSPACE_PATH")
+        i=$((i + 1))
+        rewrote=1
+        continue
+      fi
+      ;;
+    -project=*)
+      path="${a#-project=}"
+      if [ "$(basename "$path")" = "LuMap.xcodeproj" ] && [ -n "$WORKSPACE_PATH" ] && [ -d "$WORKSPACE_PATH" ]; then
+        new_args+=("-workspace" "$WORKSPACE_PATH")
+        i=$((i + 1))
+        rewrote=1
+        continue
+      fi
+      ;;
+  esac
+
+  new_args+=("$a")
+  i=$((i + 1))
+done
+
+{
+  echo "---- $(date -u +%Y-%m-%dT%H:%M:%SZ) ----"
+  echo "real=$REAL_XCODEBUILD"
+  echo "rewrote=$rewrote workspace=${WORKSPACE_PATH:-none}"
+  echo "argv_in: $*"
+  printf 'argv_out:'
+  printf ' %q' "${new_args[@]}"
+  echo
+} >> "$LOG_FILE" 2>/dev/null || true
+
+if [ "$rewrote" -eq 1 ]; then
+  echo "ci_xcodebuild_shim: rewrote LuMap.xcodeproj -> $WORKSPACE_PATH" >&2
+fi
+
+exec "$REAL_XCODEBUILD" "${new_args[@]}"
