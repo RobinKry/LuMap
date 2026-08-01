@@ -8,13 +8,11 @@ source "$SCRIPT_DIR/ci_common.sh"
 
 REPO_ROOT="$(ci_repo_root)"
 echo "ci_pre_xcodebuild: start repo=$REPO_ROOT"
-echo "ci_pre_xcodebuild: CI_XCODE_PROJECT=${CI_XCODE_PROJECT:-unset}"
-echo "ci_pre_xcodebuild: CI_XCODE_SCHEME=${CI_XCODE_SCHEME:-unset}"
-echo "ci_pre_xcodebuild: CI_ARCHIVE_PATH=${CI_ARCHIVE_PATH:-unset}"
-echo "ci_pre_xcodebuild: CI_DERIVED_DATA_PATH=${CI_DERIVED_DATA_PATH:-unset}"
-echo "ci_pre_xcodebuild: CI_XCODEBUILD_ACTION=${CI_XCODEBUILD_ACTION:-unset}"
 
 ci_prepare_path
+ci_log_env
+ci_require_workspace_or_explain
+
 ci_npm_install "$REPO_ROOT"
 ci_pod_install "$REPO_ROOT"
 
@@ -47,7 +45,6 @@ else:
     print("ci_pre_xcodebuild: explicit modules already set")
 PY
 
-# Fail fast if ASC still points at .xcodeproj — no hijack fallbacks.
 ci_require_workspace_or_explain
 
 echo "ci_pre_xcodebuild: done"
