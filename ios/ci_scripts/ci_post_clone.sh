@@ -1,23 +1,21 @@
 #!/bin/bash
 set -euo pipefail
-# Xcode Cloud: project lives under ios/ — scripts must sit next to it.
+trap 'echo "ci_post_clone: FEHLER in Zeile $LINENO (exit $?)"' ERR
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-IOS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-REPO_ROOT="$(cd "$IOS_DIR/.." && pwd)"
+# shellcheck source=ci_common.sh
+source "$SCRIPT_DIR/ci_common.sh"
 
-echo "ci_post_clone: REPO_ROOT=$REPO_ROOT"
-cd "$REPO_ROOT"
+REPO_ROOT="$(ci_repo_root)"
+echo "ci_post_clone: start repo=$REPO_ROOT CI_PRIMARY_REPOSITORY_PATH=${CI_PRIMARY_REPOSITORY_PATH:-}"
 
-if [ -f package-lock.json ]; then
-  npm ci
-else
-  npm install
-fi
+ci_prepare_path
+ci_npm_install "$REPO_ROOT"
+ci_pod_install "$REPO_ROOT"
 
-cd "$IOS_DIR"
-export LANG=en_US.UTF-8
-# Keep sandbox in sync with committed Podfile.lock (Xcode Cloud error otherwise).
-pod install --repo-update
+# RN build phases need an absolute node path on Xcode Cloud.
+NODE_BINARY="$(command -v node)"
+echo "export NODE_BINARY=${NODE_BINARY}" > "$REPO_ROOT/ios/.xcode.env.local"
+echo "ci_post_clone: wrote ios/.xcode.env.local NODE_BINARY=$NODE_BINARY"
 
 echo "ci_post_clone: done"
-ls -la "$IOS_DIR" | head -20
