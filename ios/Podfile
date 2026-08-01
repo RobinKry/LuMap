@@ -76,5 +76,13 @@ target 'LuMap' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+
+    # Xcode 16+/26 Archive: avoid "module map file not found" / No such module Expo
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'
+        config.build_settings['CLANG_ENABLE_MODULE_DEBUGGING'] = 'NO'
+      end
+    end
   end
 end
