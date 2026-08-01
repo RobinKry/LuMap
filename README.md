@@ -1,42 +1,42 @@
 # LuMap
 
-Luma-Events auf einer Karte, mit Überschneidungen zu eigenen Past-Events und LinkedIn-Kontakten.
+Expo / React Native app: Luma + LinkedIn events on a Mapbox map, with **PARTY** and **WORK** modes.
 
-## Projekte
+> Dein „Network“-Modus entspricht hier dem **PARTY**-Modus aus dem Spec (🔥 PARTY / 💼 WORK).
 
-| Pfad | Plattform |
-|------|-----------|
-| `/` (Root) | Web-Prototype (Vite + React) |
-| `ios/` | **iOS-App** (SwiftUI + MapKit) – Apple Developer Team `3RS7CS256A` |
+## Modes
 
-### Tabs (beide Clients)
+| Mode | Accent | Map style | Focus |
+|------|--------|-----------|--------|
+| PARTY | Electric Lime `#C0FF00` | `dark-v11` | Social / residential (blurred) |
+| WORK | Cobalt `#0052FF` | `navigation-night-v1` | Luma + LinkedIn professional |
 
-- **Liste** – Event-Liste mit Teilnehmer-/Overlap-Stats
-- **Karte** (Default) – Karte mit Markern
-- **Einstellungen** – Verbindungen (Platzhalter)
+## Stack
 
-## iOS
+- Expo 57 + React Native
+- NativeWind + Reanimated
+- Mapbox (`@rnmapbox/maps`)
+- Supabase (`EXPO_PUBLIC_*` + AsyncStorage auth)
+- Bottom sheet radar feed (`@gorhom/bottom-sheet`)
 
-```bash
-cd ios
-xcodegen generate   # falls project.yml geändert wurde
-open LuMap.xcodeproj
-```
-
-- Bundle ID: `com.lumap.app.lumap`
-- Team: Robin Kryszak (`3RS7CS256A`)
-- Deployment Target: iOS 17+
-
-In Xcode einmal auf einem echten Gerät / mit Automatic Signing bauen, damit die App-ID im Apple Developer Portal angelegt wird. Danach in [App Store Connect](https://appstoreconnect.apple.com) eine neue App mit derselben Bundle-ID anlegen.
-
-## Web (Prototype)
+## Setup
 
 ```bash
 npm install
 cp .env.example .env.local
-npm run dev
+# EXPO_PUBLIC_SUPABASE_* + EXPO_PUBLIC_MAPBOX_TOKEN setzen
+npx expo start
 ```
 
-## Supabase
+iOS native project (for Xcode / Xcode Cloud):
 
-Projekt: `LuMap` (Region `eu-west-1`). Schema und Sync kommen später.
+```bash
+npx expo prebuild --platform ios
+open ios/LuMap.xcworkspace
+```
+
+Bundle ID: `com.lumap.com` · Team: `3RS7CS256A`
+
+## Data sources (v1)
+
+Primary: **Luma** + **LinkedIn**. Partiful / Eventbrite types + parsers are scaffolded for later.

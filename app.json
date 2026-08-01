@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "LuMap",
+    "slug": "lumap",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "lumap",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.lumap.com",
+      "appleTeamId": "3RS7CS256A",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "LuMap zeigt Events in deiner Nähe auf der Karte."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0D0D12",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.lumap.com",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser",
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": ""
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    }
+  }
+}

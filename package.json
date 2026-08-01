@@ -1,30 +1,40 @@
 {
   "name": "lumap",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "0.1.0",
+  "main": "index.ts",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "prebuild": "expo prebuild",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@gorhom/bottom-sheet": "^5.2.14",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@rnmapbox/maps": "^10.3.5",
     "@supabase/supabase-js": "^2.111.0",
-    "leaflet": "^1.9.4",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "react-leaflet": "^5.0.0",
-    "react-router-dom": "^7.18.2"
+    "expo": "~57.0.9",
+    "expo-blur": "~57.0.2",
+    "expo-haptics": "~57.0.1",
+    "expo-status-bar": "~57.0.1",
+    "expo-web-browser": "~57.0.2",
+    "nativewind": "^4.2.6",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "react": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "tailwindcss": "^3.4.17"
   },
   "devDependencies": {
-    "@types/leaflet": "^1.9.22",
-    "@types/node": "^24.13.3",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.4",
-    "oxlint": "^1.75.0",
-    "typescript": "~6.0.2",
-    "vite": "^8.2.0"
-  }
+    "@babel/core": "^7.29.7",
+    "@types/react": "~19.2.2",
+    "babel-preset-expo": "^57.0.5",
+    "typescript": "~6.0.3"
+  },
+  "private": true
 }

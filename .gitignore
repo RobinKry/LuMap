@@ -12,19 +12,26 @@ dist
 dist-ssr
 *.local
 .env
+.env.local
 .env.*.local
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
 
 # Supabase
 supabase/.temp
 
-# iOS / Xcode
-ios/build/
+# Native build artifacts (committed ios/ from prebuild is OK)
 **/DerivedData/
 *.xcuserstate
 xcuserdata/
-*.xccheckout
-*.moved-aside
-*.hmap
+android/app/build/
+ios/build/
+ios/Pods/
+ios/Podfile.lock
 *.ipa
 *.dSYM.zip
 *.dSYM
