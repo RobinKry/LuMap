@@ -18,6 +18,5 @@ echo "export NODE_BINARY=${NODE_BINARY}" > "$REPO_ROOT/ios/.xcode.env.local"
 echo "ci_post_clone: wrote ios/.xcode.env.local NODE_BINARY=$NODE_BINARY"
 
 ci_require_workspace_or_explain
-ci_hijack_xcodebuild
 
 echo "ci_post_clone: done"

@@ -47,24 +47,7 @@ else:
     print("ci_pre_xcodebuild: explicit modules already set")
 PY
 
+# Fail fast if ASC still points at .xcodeproj — no hijack fallbacks.
 ci_require_workspace_or_explain
-ci_hijack_xcodebuild
-
-# If workflow still points at .xcodeproj AND we could not replace absolute xcodebuild,
-# fail fast with a clear ASC instruction instead of 29 Expo modulemap errors.
-if [[ "${CI_XCODE_PROJECT:-}" == *.xcodeproj ]]; then
-  real="/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild"
-  if [ ! -x "${real}.lumap_real" ]; then
-    echo "error: Cannot rewrite absolute xcodebuild on this image, and workflow uses .xcodeproj."
-    echo "error: App Store Connect → LuMap → Xcode Cloud → Default → Edit → Environment → set to ios/LuMap.xcworkspace → Save → Start Build"
-    exit 1
-  fi
-  # Verify wrapper is actually installed at absolute path (not the original Mach-O only)
-  if ! head -1 "$real" 2>/dev/null | grep -q bash; then
-    echo "error: absolute xcodebuild was not replaced with workspace shim."
-    echo "error: App Store Connect → set Xcode Project to ios/LuMap.xcworkspace"
-    exit 1
-  fi
-fi
 
 echo "ci_pre_xcodebuild: done"
