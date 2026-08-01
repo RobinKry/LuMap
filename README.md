@@ -1,20 +1,12 @@
 # LuMap
 
-Expo / React Native app: Luma + LinkedIn events on a Mapbox map, with **PARTY** and **WORK** modes.
-
-> Dein „Network“-Modus entspricht hier dem **PARTY**-Modus aus dem Spec (🔥 PARTY / 💼 WORK).
-
-## Modes
-
-| Mode | Accent | Map style | Focus |
-|------|--------|-----------|--------|
-| PARTY | Electric Lime `#C0FF00` | `dark-v11` | Social / residential (blurred) |
-| WORK | Cobalt `#0052FF` | `navigation-night-v1` | Luma + LinkedIn professional |
+Expo / React Native app: öffentliche Luma-Events (+ LinkedIn-Overlaps) auf einer Mapbox-Karte.
 
 ## Data pipeline (v1)
 
-- **Luma:** Edge Function `fetch-luma-event` — öffentliche Event-Metadaten + Guest-Namen nur wenn die Liste öffentlich ist
-- **LinkedIn:** Edge Function `import-linkedin-csv` — offizieller Connections.csv-Upload (kein Scraping)
+- **Luma Discover:** Edge Function `discover-luma-events` — öffentliche Events (z. B. Berlin), auch ohne Anmeldung
+- **Luma Detail:** Edge Function `fetch-luma-event` — Event-Metadaten + Guest-Namen nur wenn die Liste öffentlich ist
+- **LinkedIn:** Edge Function `import-linkedin-csv` — Connections/Invitations.csv (kein Scraping)
 - **Overlaps:** SQL `refresh_event_overlaps` + Function `match-overlaps` (Name-Match)
 
 Supabase tables: `events`, `event_guests`, `linkedin_contacts`, `event_overlaps`, `user_tracked_events`
@@ -28,7 +20,7 @@ cp .env.example .env.local
 npx expo start
 ```
 
-In der App: **Settings** → LinkedIn-CSV hochladen + Luma-URL syncen.
+Beim Öffnen lädt die App öffentliche Berlin-Events. Optional in **Settings**: LinkedIn-CSV + einzelne Luma-URL.
 
 iOS:
 

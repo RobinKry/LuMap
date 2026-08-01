@@ -1,82 +1,69 @@
-import * as Haptics from 'expo-haptics'
 import {
   createContext,
-  useCallback,
   useContext,
   useMemo,
-  useState,
   type ReactNode,
 } from 'react'
-import type { AppMode } from '../types'
+import { LM } from '../theme/tokens'
 
 export type ModeTheme = {
   bg: string
   accent: string
+  accentSoft: string
+  accentInk: string
   cardBg: string
+  sheetBg: string
+  chrome: string
+  textPrimary: string
+  textBody: string
+  textMuted: string
+  textFaint: string
+  border: string
   mapStyle: string
 }
 
-export const MODE_THEMES: Record<AppMode, ModeTheme> = {
-  PARTY: {
-    bg: '#0D0D12',
-    accent: '#C0FF00',
-    cardBg: 'rgba(25, 25, 35, 0.85)',
-    mapStyle: 'mapbox://styles/mapbox/dark-v11',
-  },
-  WORK: {
-    bg: '#12161A',
-    accent: '#0052FF',
-    cardBg: 'rgba(30, 38, 46, 0.90)',
-    mapStyle: 'mapbox://styles/mapbox/navigation-night-v1',
-  },
+/** Single light theme — no WORK/PARTY modes. */
+export const APP_THEME: ModeTheme = {
+  bg: LM.paperMist,
+  accent: LM.sky500,
+  accentSoft: LM.sky100,
+  accentInk: LM.ink900,
+  cardBg: LM.paperWhite,
+  sheetBg: 'rgba(255,255,255,0.92)',
+  chrome: 'rgba(255,255,255,0.78)',
+  textPrimary: LM.ink900,
+  textBody: LM.ink700,
+  textMuted: LM.ink500,
+  textFaint: LM.ink300,
+  border: LM.alpha10,
+  mapStyle: 'mapbox://styles/mapbox/light-v11',
 }
 
-type AppModeContextValue = {
-  mode: AppMode
+type ThemeContextValue = {
   theme: ModeTheme
-  toggleMode: () => void
-  setMode: (mode: AppMode) => void
 }
 
-const AppModeContext = createContext<AppModeContextValue | null>(null)
+const ThemeContext = createContext<ThemeContextValue | null>(null)
 
-export function AppModeProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeState] = useState<AppMode>('PARTY')
-
-  const setMode = useCallback((next: AppMode) => {
-    setModeState((current) => {
-      if (current === next) return current
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
-      return next
-    })
-  }, [])
-
-  const toggleMode = useCallback(() => {
-    setModeState((current) => {
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
-      return current === 'PARTY' ? 'WORK' : 'PARTY'
-    })
-  }, [])
-
-  const value = useMemo(
-    () => ({
-      mode,
-      theme: MODE_THEMES[mode],
-      toggleMode,
-      setMode,
-    }),
-    [mode, toggleMode, setMode],
-  )
-
+export function AppThemeProvider({ children }: { children: ReactNode }) {
+  const value = useMemo(() => ({ theme: APP_THEME }), [])
   return (
-    <AppModeContext.Provider value={value}>{children}</AppModeContext.Provider>
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   )
 }
 
-export function useAppMode() {
-  const ctx = useContext(AppModeContext)
+export function useAppTheme() {
+  const ctx = useContext(ThemeContext)
   if (!ctx) {
-    throw new Error('useAppMode must be used within AppModeProvider')
+    throw new Error('useAppTheme must be used within AppThemeProvider')
   }
   return ctx
 }
+
+/** @deprecated use useAppTheme — kept for gradual rename */
+export function useAppMode() {
+  return useAppTheme()
+}
+
+/** @deprecated use AppThemeProvider */
+export const AppModeProvider = AppThemeProvider

@@ -1,0 +1,30 @@
+/* Radii, strokes, blur, elevation — pastel direction: rounder, with soft
+   coloured shadows instead of the dark build's stroke-only depth. */
+:root{
+  --radius-sm:12px;
+  --radius-md:16px;
+  --radius-lg:20px;    /* inputs, nested cards */
+  --radius-xl:28px;    /* event cards */
+  --radius-sheet:32px; /* bottom-sheet top corners */
+  --radius-full:999px; /* pills, buttons, segments, avatars */
+
+  --stroke:1px; /* @kind other */
+  --stroke-ring:2px; /* @kind other */
+
+  --blur-chrome:35; /* @kind other */
+  --blur-css:blur(16px); /* @kind other */
+  --blur-backdrop:saturate(150%) blur(16px); /* @kind other */
+
+  /* Map pin geometry (unchanged from the source heatmap) */
+  --pin-core:14px;
+  --pin-halo:32px;
+  --pin-blur-inner:44px;
+  --pin-blur-outer:84px;
+
+  /* Soft ink shadows — never black, never harsh */
+  --shadow-card:0 1px 2px rgba(36,30,51,0.05), 0 8px 22px rgba(36,30,51,0.07);
+  --shadow-raised:0 2px 4px rgba(36,30,51,0.06), 0 14px 34px rgba(36,30,51,0.10);
+  --shadow-sheet:0 -10px 40px rgba(36,30,51,0.12);
+  --shadow-pop:0 3px 0 var(--accent-glow);
+  --shadow-none:none;
+}

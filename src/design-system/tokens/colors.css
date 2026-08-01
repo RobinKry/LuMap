@@ -1,0 +1,85 @@
+/* LuMap colour tokens — PASTEL / LIGHT direction.
+   NOTE: this departs from the shipped app (RobinKry/LuMap ships a dark,
+   neon-accent UI). The PARTY / WORK duality is preserved; only the value range
+   moved from night to paper. Original dark values are recorded in readme.md. */
+:root{
+  /* Accents — the two the product pivots on */
+  --lm-lilac-500:#8B88F2;   /* PARTY accent */
+  --lm-lilac-300:#B6B3FF;
+  --lm-lilac-100:#E7E5FF;
+  --lm-sky-500:#77A0F2;     /* WORK accent */
+  --lm-sky-300:#A6C2FF;
+  --lm-sky-100:#E1EAFF;
+
+  /* Supporting pastels — chips, mode tags, highlight blocks */
+  --lm-mint-300:#9FE7CB;
+  --lm-mint-100:#E2F8EF;
+  --lm-butter-300:#FFDE87;
+  --lm-butter-100:#FFF4D6;
+  --lm-peach-300:#FFB59E;
+  --lm-peach-100:#FFE9E1;
+
+  --lm-linkedin:#0A66C2;    /* source colour, unchanged */
+
+  /* Paper + ink */
+  --lm-paper-cream:#FFF7EE;  /* PARTY canvas — warm */
+  --lm-paper-mist:#F3F5FF;   /* WORK canvas — cool */
+  --lm-paper-white:#FFFFFF;
+  --lm-ink-900:#241E33;      /* plum-black, all primary text */
+  --lm-ink-700:#4A4360;
+  --lm-ink-500:#7A7391;
+  --lm-ink-300:#ADA6C1;
+
+  /* Ink alpha ramp — every stroke, fill and scrim is ink at an opacity */
+  --lm-alpha-04:rgba(36,30,51,0.04);
+  --lm-alpha-06:rgba(36,30,51,0.06);
+  --lm-alpha-08:rgba(36,30,51,0.08);
+  --lm-alpha-10:rgba(36,30,51,0.10);
+  --lm-alpha-14:rgba(36,30,51,0.14);
+  --lm-alpha-20:rgba(36,30,51,0.20);
+  --lm-alpha-30:rgba(36,30,51,0.30);
+  --lm-alpha-45:rgba(36,30,51,0.45);
+  --lm-alpha-60:rgba(36,30,51,0.60);
+  --lm-alpha-75:rgba(36,30,51,0.75);
+
+  /* ---- Semantic aliases (default = WORK, the app's launch mode) ---- */
+  --surface-canvas:var(--lm-paper-mist);
+  --surface-sheet:rgba(255,255,255,0.86);
+  --surface-card:var(--lm-paper-white);
+  --surface-input:var(--lm-paper-white);
+  --surface-chrome:rgba(255,255,255,0.74);
+
+  --accent:var(--lm-sky-500);
+  --accent-soft:var(--lm-sky-100);     /* tinted fills, chips, pin halos */
+  --accent-ink:var(--lm-ink-900);      /* label colour on top of --accent */
+  --accent-glow:rgba(119,160,242,0.28);
+
+  --border-strong:var(--lm-alpha-14);
+  --border-soft:var(--lm-alpha-10);
+  --border-hairline:var(--lm-alpha-08);
+
+  --text-primary:var(--lm-ink-900);
+  --text-body:var(--lm-ink-700);
+  --text-secondary:var(--lm-ink-700);
+  --text-tertiary:var(--lm-ink-500);
+  --text-muted:var(--lm-ink-500);
+  --text-faint:var(--lm-ink-300);
+}
+
+/* PARTY mode — 🔥 warm paper, lilac accent · opt-in */
+[data-mode="party"]{
+  --surface-canvas:var(--lm-paper-cream);
+  --accent:var(--lm-lilac-500);
+  --accent-soft:var(--lm-lilac-100);
+  --accent-ink:var(--lm-ink-900);
+  --accent-glow:rgba(139,136,242,0.28);
+}
+
+/* WORK mode — 💼 cool paper, sky accent · DEFAULT */
+[data-mode="work"]{
+  --surface-canvas:var(--lm-paper-mist);
+  --accent:var(--lm-sky-500);
+  --accent-soft:var(--lm-sky-100);
+  --accent-ink:var(--lm-ink-900);
+  --accent-glow:rgba(119,160,242,0.28);
+}

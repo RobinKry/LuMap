@@ -1,38 +1,61 @@
 import 'react-native-gesture-handler'
 import './global.css'
 
+import {
+  Fredoka_500Medium,
+  Fredoka_600SemiBold,
+} from '@expo-google-fonts/fredoka'
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+} from '@expo-google-fonts/plus-jakarta-sans'
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet'
+import { useFonts } from 'expo-font'
 import { StatusBar } from 'expo-status-bar'
 import { useCallback, useEffect, useState } from 'react'
-import { Modal, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { InteractiveHeatmap } from './src/components/InteractiveHeatmap'
 import { LiveRadarFeed } from './src/components/LiveRadarFeed'
-import { ModeSwitch } from './src/components/ModeSwitch'
 import { SettingsPanel } from './src/components/SettingsPanel'
-import { AppModeProvider, useAppMode } from './src/context/AppModeContext'
-import { mockFeedEvents } from './src/data/mockFeedEvents'
+import { AppThemeProvider, useAppTheme } from './src/context/AppModeContext'
 import { ensureSession } from './src/services/auth'
-import { loadFeedEvents } from './src/services/eventsApi'
+import {
+  discoverLumaEvents,
+  loadFeedEvents,
+  syncSavedLumaSources,
+} from './src/services/eventsApi'
+import { fonts, LM } from './src/theme/tokens'
 import type { EventItem } from './src/types'
 
 function HomeScreen() {
-  const { theme } = useAppMode()
+  const { theme } = useAppTheme()
   const [selected, setSelected] = useState<EventItem | null>(null)
-  const [events, setEvents] = useState<EventItem[]>(mockFeedEvents)
+  const [events, setEvents] = useState<EventItem[]>([])
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const refresh = useCallback(async () => {
     const rows = await loadFeedEvents()
-    if (rows.length > 0) {
-      setEvents(rows)
-    }
+    setEvents(rows)
   }, [])
 
   useEffect(() => {
     void (async () => {
       await ensureSession()
+      // Feed first so map/list aren't empty while discover/sync runs.
+      await refresh()
+      try {
+        await discoverLumaEvents({ place: 'berlin', limit: 30 })
+      } catch (error) {
+        console.warn(
+          '[luma] discover failed',
+          error instanceof Error ? error.message : error,
+        )
+      }
+      await syncSavedLumaSources()
       await refresh()
     })()
   }, [refresh])
@@ -43,7 +66,7 @@ function HomeScreen() {
 
   return (
     <View className="flex-1" style={{ backgroundColor: theme.bg }}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <InteractiveHeatmap events={events} onSelectEvent={onSelectEvent} />
       <SafeAreaView
         pointerEvents="box-none"
@@ -52,12 +75,32 @@ function HomeScreen() {
         <View className="flex-row items-center justify-between">
           <Pressable
             onPress={() => setSettingsOpen(true)}
-            className="rounded-full border border-white/15 px-3 py-2"
-            style={{ backgroundColor: 'rgba(20,20,28,0.55)' }}
+            className="rounded-full px-3 py-2"
+            style={{
+              backgroundColor: theme.chrome,
+              borderWidth: 1,
+              borderColor: theme.border,
+            }}
           >
-            <Text className="text-xs font-semibold text-white">Settings</Text>
+            <Text
+              style={{
+                fontFamily: fonts.uiSemiBold,
+                fontSize: 12,
+                color: theme.textPrimary,
+              }}
+            >
+              Settings
+            </Text>
           </Pressable>
-          <ModeSwitch />
+          <Text
+            style={{
+              fontFamily: fonts.display,
+              fontSize: 20,
+              color: theme.textPrimary,
+            }}
+          >
+            LuMap
+          </Text>
           <View style={{ width: 72 }} />
         </View>
       </SafeAreaView>
@@ -89,13 +132,37 @@ function HomeScreen() {
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Fredoka_500Medium,
+    Fredoka_600SemiBold,
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+  })
+
+  if (!fontsLoaded) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: LM.paperMist,
+        }}
+      >
+        <ActivityIndicator color={LM.sky500} />
+      </View>
+    )
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <BottomSheetModalProvider>
-          <AppModeProvider>
+          <AppThemeProvider>
             <HomeScreen />
-          </AppModeProvider>
+          </AppThemeProvider>
         </BottomSheetModalProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

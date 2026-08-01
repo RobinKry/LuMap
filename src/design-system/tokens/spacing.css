@@ -1,0 +1,21 @@
+/* 4px base scale — every padding/margin in the app resolves to one of these */
+:root{
+  --space-1:4px;
+  --space-2:8px;
+  --space-3:12px;
+  --space-4:16px;
+  --space-5:20px;
+  --space-6:24px;
+  --space-8:32px;
+  --space-10:40px;
+
+  /* Component-level constants read straight from source */
+  --pad-card:16px;         /* p-4 on a radar card */
+  --pad-card-inner:12px;   /* p-3 on the nested LinkedIn card */
+  --pad-screen-x:16px;     /* px-4 gutter on every screen */
+  --gap-card:12px;         /* mb-3 between feed cards */
+  --gap-stat:16px;         /* gap-4 between stat blocks */
+  --avatar-overlap:-8px;   /* FriendAvatarStack negative marginLeft */
+  --segment-width:96px;    /* PILL_WIDTH — 118px on native, tightened for web chrome */
+  --sheet-snap:18%,42%,78%; /* @kind other *//* LiveRadarFeed snapPoints */
+}

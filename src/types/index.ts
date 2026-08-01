@@ -2,6 +2,12 @@ export type AppMode = 'WORK' | 'PARTY'
 
 export type EventSource = 'LUMA' | 'PARTIFUL' | 'LINKEDIN' | 'EVENTBRITE'
 
+export interface EventAttendeePreview {
+  id: string
+  display_name: string
+  avatar_url: string | null
+}
+
 export interface EventItem {
   id: string
   title: string
@@ -15,11 +21,15 @@ export interface EventItem {
   start_time: string | null
   original_author_name: string | null
   original_author_headline: string | null
-  /** Optional enriched fields from DB */
+  cover_url?: string | null
+  description?: string | null
+  host_name?: string | null
   attendee_count?: number | null
   guest_list_public?: boolean
   linkedin_match_count?: number
   match_preview?: string[]
+  /** Public guest list when available */
+  guests?: EventAttendeePreview[]
 }
 
 export interface UserProfile {
@@ -38,10 +48,10 @@ export interface Friendship {
   created_at: string
 }
 
-export interface EventAttendeePreview {
-  id: string
+export interface DbEventGuestRow {
   display_name: string
   avatar_url: string | null
+  name_key?: string
 }
 
 export interface DbEventRow {
@@ -59,6 +69,10 @@ export interface DbEventRow {
   start_time: string | null
   original_author_name: string | null
   original_author_headline: string | null
+  cover_url?: string | null
+  description?: string | null
+  host_name?: string | null
+  event_guests?: DbEventGuestRow[] | null
 }
 
 export interface EventOverlapRow {

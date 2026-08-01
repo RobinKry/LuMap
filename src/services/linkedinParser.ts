@@ -3,7 +3,7 @@ import type { EventItem } from '../types'
 const EVENT_INTENT_RE =
   /\b(attending|speaking at|conference|meetup|happy hour|summit)\b/i
 
-/** Extracts WORK-mode event signals from a LinkedIn post. */
+/** Extracts event signals from a LinkedIn post. */
 export function parseLinkedInPost(
   postText: string,
   authorName: string,

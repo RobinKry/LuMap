@@ -8,6 +8,7 @@ type LumaPayload = {
   url?: string
   start_at?: string
   cover_url?: string
+  description?: string
   guest_count?: number
   show_guest_list?: boolean
   hosts?: Array<{ name?: string }>
@@ -46,6 +47,10 @@ const PUBLIC_FIXTURE: LumaPayload = {
     longitude: 13.3842,
   },
   hosts: [{ name: 'ML Berlin' }],
+  cover_url:
+    'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80',
+  description:
+    'Builders meetup for AI founders and engineers in Berlin. Talks, demos, open networking.',
   guest_count: 3,
   show_guest_list: true,
   guests: [
@@ -132,12 +137,25 @@ function normalizeApiPayload(json: Record<string, unknown>, slug: string): LumaP
       ? event.show_guest_list
       : guestsRaw.length > 0
 
+  const descriptionRaw =
+    (event.description as string | undefined) ??
+    (event.description_mirror as string | undefined) ??
+    (event.calendar_description as string | undefined)
+
+  const cover =
+    (event.cover_url as string | undefined) ??
+    ((event.cover_image as { url?: string } | undefined)?.url) ??
+    undefined
+
   return {
     api_id: String(event.api_id ?? event.id ?? ''),
     name: String(event.name ?? event.title ?? slug),
     url: eventUrlFromSlug(slug),
     start_at: (event.start_at as string) ?? (event.start_datetime as string),
-    cover_url: (event.cover_url as string) ?? undefined,
+    cover_url: cover,
+    description: descriptionRaw
+      ? String(descriptionRaw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      : undefined,
     guest_count:
       typeof event.guest_count === 'number'
         ? event.guest_count
@@ -156,6 +174,14 @@ function parseHtmlFallback(html: string, slug: string): LumaPayload {
     html.match(/<meta property="og:title" content="([^"]+)"/i)?.[1] ??
     html.match(/<title>([^<]+)<\/title>/i)?.[1] ??
     slug
+
+  const cover =
+    html.match(/<meta property="og:image" content="([^"]+)"/i)?.[1] ??
+    html.match(/<meta name="twitter:image" content="([^"]+)"/i)?.[1]
+
+  const description =
+    html.match(/<meta property="og:description" content="([^"]+)"/i)?.[1] ??
+    html.match(/<meta name="description" content="([^"]+)"/i)?.[1]
 
   const showGuestList =
     /who's coming|who is coming|guest list/i.test(html) &&
@@ -176,6 +202,10 @@ function parseHtmlFallback(html: string, slug: string): LumaPayload {
   return {
     name: title.replace(/\s+\|\s*Luma.*/i, '').trim(),
     url: eventUrlFromSlug(slug),
+    cover_url: cover,
+    description: description
+      ? description.replace(/&amp;/g, '&').replace(/&#39;/g, "'").trim()
+      : undefined,
     show_guest_list: showGuestList && guests.length > 0,
     guest_count: guests.length || undefined,
     guests: showGuestList ? guests : [],
@@ -244,6 +274,7 @@ Deno.serve(async (req) => {
       attendee_count: payload.guest_count ?? (guestListPublic ? payload.guests?.length ?? null : null),
       start_time: payload.start_at ?? null,
       cover_url: payload.cover_url ?? null,
+      description: payload.description ?? null,
       host_name: payload.hosts?.[0]?.name ?? null,
       fetched_at: new Date().toISOString(),
     }
