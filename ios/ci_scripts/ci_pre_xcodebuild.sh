@@ -11,16 +11,6 @@ echo "ci_pre_xcodebuild: start repo=$REPO_ROOT"
 echo "ci_pre_xcodebuild: CI_XCODE_PROJECT=${CI_XCODE_PROJECT:-unset}"
 echo "ci_pre_xcodebuild: CI_XCODE_SCHEME=${CI_XCODE_SCHEME:-unset}"
 
-# CocoaPods Expo modules only resolve when Archive uses the workspace.
-if [[ "${CI_XCODE_PROJECT:-}" == *.xcodeproj ]]; then
-  echo "============================================================"
-  echo "FEHLER: Xcode Cloud archived against .xcodeproj"
-  echo "Bitte Workflow → Environment auf ios/LuMap.xcworkspace umstellen."
-  echo "Sonst: No such module 'Expo' / missing *.modulemap"
-  echo "============================================================"
-  exit 1
-fi
-
 ci_prepare_path
 
 if [ ! -d "$REPO_ROOT/ios/Pods" ] || [ ! -f "$REPO_ROOT/ios/Podfile.lock" ]; then
@@ -31,6 +21,13 @@ ci_pod_install "$REPO_ROOT"
 
 NODE_BINARY="$(command -v node)"
 echo "export NODE_BINARY=${NODE_BINARY}" > "$REPO_ROOT/ios/.xcode.env.local"
+
+# Always install shim: Cloud workflow may still select .xcodeproj.
+ci_install_xcodebuild_workspace_shim
+
+if [[ "${CI_XCODE_PROJECT:-}" == *.xcodeproj ]]; then
+  echo "ci_pre_xcodebuild: WARN — workflow points at .xcodeproj; shim rewrites to .xcworkspace"
+fi
 
 cd "$REPO_ROOT"
 # Ensure target Release also disables explicit modules (Xcode 26 Archive)
@@ -47,7 +44,6 @@ text = text.replace(
     "SWIFT_OBJC_BRIDGING_HEADER = \"LuMap/LuMap-Bridging-Header.h\";\n\t\t\t\tSWIFT_VERSION",
     "SWIFT_OBJC_BRIDGING_HEADER = \"LuMap/LuMap-Bridging-Header.h\";\n\t\t\t\tSWIFT_ENABLE_EXPLICIT_MODULES = NO;\n\t\t\t\tSWIFT_VERSION",
 )
-# Avoid duplicating if already patched
 while "SWIFT_ENABLE_EXPLICIT_MODULES = NO;\n\t\t\t\tSWIFT_ENABLE_EXPLICIT_MODULES = NO;" in text:
     text = text.replace(
         "SWIFT_ENABLE_EXPLICIT_MODULES = NO;\n\t\t\t\tSWIFT_ENABLE_EXPLICIT_MODULES = NO;",
