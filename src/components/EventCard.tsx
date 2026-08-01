@@ -237,9 +237,11 @@ export function EventCard({ event, selected = false, onSelect }: Props) {
           <Text
             className="mt-1"
             style={{
-              fontFamily: fonts.ui,
-              fontSize: 12,
-              color: theme.textMuted,
+              fontFamily: fonts.display,
+              fontSize: 15,
+              letterSpacing: -0.2,
+              lineHeight: 20,
+              color: theme.textPrimary,
             }}
           >
             {event.venue_name}

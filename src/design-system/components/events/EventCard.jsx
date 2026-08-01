@@ -35,7 +35,21 @@ export function EventCard({ event = {}, selected = false, onSelect, onOpenLink, 
       </div>
 
       <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-semibold)', letterSpacing: 'var(--tracking-display)', color: 'var(--text-primary)', lineHeight: 'var(--leading-snug)' }}>{title}</div>
-      {venue_name && <div style={{ marginTop: 4, fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{venue_name}</div>}
+      {venue_name && (
+        <div
+          style={{
+            marginTop: 4,
+            fontFamily: 'var(--font-display)',
+            fontSize: 'var(--text-sm)',
+            fontWeight: 'var(--weight-semibold)',
+            letterSpacing: 'var(--tracking-display)',
+            lineHeight: 'var(--leading-snug)',
+            color: 'var(--text-primary)',
+          }}
+        >
+          {venue_name}
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 'var(--gap-stat)', marginTop: 12 }}>
         <StatBlock value={attendee_count} label="dabei" />
