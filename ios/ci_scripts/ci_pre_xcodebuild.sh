@@ -11,7 +11,9 @@ echo "ci_pre_xcodebuild: start repo=$REPO_ROOT"
 
 ci_prepare_path
 ci_log_env
-ci_require_workspace_or_explain
+
+# Soft warn early; hard fail after deps so logs still show npm/pod success.
+ci_warn_unless_workspace
 
 ci_npm_install "$REPO_ROOT"
 ci_pod_install "$REPO_ROOT"
@@ -45,6 +47,7 @@ else:
     print("ci_pre_xcodebuild: explicit modules already set")
 PY
 
+# Archive gate: fail here (not in post_clone) if ASC still uses .xcodeproj.
 ci_require_workspace_or_explain
 
 echo "ci_pre_xcodebuild: done"

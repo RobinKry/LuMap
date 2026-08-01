@@ -210,6 +210,9 @@ export function InteractiveHeatmap({
         showsPointsOfInterests
         mapType="standard"
         userInterfaceStyle="light"
+        // MKMapView tints the system location puck from the view hierarchy
+        // (tab accent is teal). Force iOS system blue for the puck only.
+        tintColor="#007AFF"
       >
         {pins.map((pin) => (
           <Marker

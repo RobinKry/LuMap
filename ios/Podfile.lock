@@ -90,14 +90,6 @@ PODS:
   - hermes-engine (250829098.0.16):
     - hermes-engine/Pre-built (= 250829098.0.16)
   - hermes-engine/Pre-built (250829098.0.16)
-  - MapboxCommon (24.23.1):
-    - Turf (= 4.0.0)
-  - MapboxCoreMaps (11.23.1):
-    - MapboxCommon (= 24.23.1)
-  - MapboxMaps (11.23.1):
-    - MapboxCommon (= 24.23.1)
-    - MapboxCoreMaps (= 11.23.1)
-    - Turf (= 4.0.0)
   - RCTDeprecation (0.86.2)
   - RCTRequired (0.86.2)
   - RCTSwiftUI (0.86.2)
@@ -2078,33 +2070,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - rnmapbox-maps (10.3.5):
-    - MapboxMaps (~> 11.23.1)
-    - React
-    - React-Core
-    - rnmapbox-maps/DynamicLibrary (= 10.3.5)
-    - Turf
-  - rnmapbox-maps/DynamicLibrary (10.3.5):
-    - hermes-engine
-    - MapboxMaps (~> 11.23.1)
-    - RCTRequired
-    - RCTTypeSafety
-    - React
-    - React-Core
-    - React-Core-prebuilt
-    - React-featureflags
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - Turf
-    - Yoga
   - RNReanimated (4.5.1):
     - hermes-engine
     - RCTRequired
@@ -2367,7 +2332,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - Turf (4.0.0)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -2468,19 +2432,11 @@ DEPENDENCIES:
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
-  - "rnmapbox-maps (from `../node_modules/@rnmapbox/maps`)"
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
-
-SPEC REPOS:
-  trunk:
-    - MapboxCommon
-    - MapboxCoreMaps
-    - MapboxMaps
-    - Turf
 
 EXTERNAL SOURCES:
   EXConstants:
@@ -2676,8 +2632,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-async-storage/async-storage"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
-  rnmapbox-maps:
-    :path: "../node_modules/@rnmapbox/maps"
   RNReanimated:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
@@ -2710,9 +2664,6 @@ SPEC CHECKSUMS:
   ExpoWebBrowser: 9b98d939d5f1c5dd8f523f0a0683056fb1204434
   FBLazyVector: 3c3be9a019176b5699455f7f66c5444b78a411c6
   hermes-engine: 0e861ece2ff9844aca86dc48eaaf53b97e9ccfc5
-  MapboxCommon: d006256c4643860a7b3046af45d1671569b6c5ac
-  MapboxCoreMaps: de1a4461d0ab5d65d907f06e8d82fdbe06bb3213
-  MapboxMaps: 22340ae0e0d47b2e4761019b1d6c569ab04e088d
   RCTDeprecation: bccb6545c26db881ecddfd83a3f9ea82aba1605f
   RCTRequired: b2f74764d596fc0051f00fee94b49bf41a6f7f5a
   RCTSwiftUI: c6d6a31b849b9dfa64c33b55dc91ac15dd55774c
@@ -2789,14 +2740,12 @@ SPEC CHECKSUMS:
   ReactNativeDependencies: 2bd6854ade79bf1b60586d1ab7813a389df1b6bf
   RNCAsyncStorage: 2ad919e88b8bc2cd80e8697ce66d04d006743283
   RNGestureHandler: 92172e79df6e88e0e93b6341f9dcd8b5a02746ba
-  rnmapbox-maps: 2898fe0a478c26be588ffed831e289c244738562
   RNReanimated: fcf6a8cdd698fb09a811a8d6c5bcfe36575d965d
   RNScreens: 7118cd7715c226856125b5bece3c4d9abec90356
   RNSVG: 3fe8590403ac9f107b4d14591bc6e54da4894e5c
   RNWorklets: 064c16e85402f244420e35d28b2a42f889f836ed
-  Turf: c9eb11a65d96af58cac523460fd40fec5061b081
   Yoga: 9891cfb1c680f64de9c41b09e7453dea33454d2b
 
-PODFILE CHECKSUM: 12b8fc74dff16cb23c3c72e5e542c65bd23dd913
+PODFILE CHECKSUM: de21e0c692e703abebf5576eb9057c72824a139f
 
 COCOAPODS: 1.16.2

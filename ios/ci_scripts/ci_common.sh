@@ -85,6 +85,28 @@ ci_npm_install() {
   node -e "require.resolve('expo/package.json'); require.resolve('react-native-maps/package.json'); require.resolve('expo-location/package.json'); console.log('ci: npm deps ok (expo, react-native-maps, expo-location)')"
 }
 
+# Run pod install through tee without masking the real exit code.
+# With `set -o pipefail`, `${PIPESTATUS[0]}` is the pod exit; tee is [1].
+ci_run_pod_install() {
+  local extra_args=("$@")
+  local pod_log pod_status
+  pod_log="$(mktemp "${TMPDIR:-/tmp}/ci-pod-install.XXXXXX")"
+  set +e
+  pod install "${extra_args[@]}" 2>&1 | tee "$pod_log"
+  pod_status=${PIPESTATUS[0]}
+  set -e
+  if [ "$pod_status" -ne 0 ]; then
+    echo "ci: pod install exit=$pod_status"
+    if grep -Eiq 'mapbox|RNMapbox|RNMAPBOX|download.?token|api\.mapbox\.com|401|403' "$pod_log"; then
+      echo "error: Looks Mapbox-related. Either remove unused @rnmapbox/maps, or set ASC Environment Variable RNMAPBOX_MAPS_DOWNLOAD_TOKEN (secret download token from mapbox.com)."
+    fi
+    rm -f "$pod_log"
+    return "$pod_status"
+  fi
+  rm -f "$pod_log"
+  return 0
+}
+
 ci_pod_install() {
   local root="$1"
   cd "$root/ios"
@@ -101,20 +123,13 @@ ci_pod_install() {
 
   echo "ci: pod install (cwd=$(pwd))"
   # Prefer lockfile sync first (faster, deterministic). Fall back to repo-update.
-  local pod_log
-  pod_log="$(mktemp "${TMPDIR:-/tmp}/ci-pod-install.XXXXXX")"
-  if ! pod install 2>&1 | tee "$pod_log"; then
+  if ! ci_run_pod_install; then
     echo "ci: pod install failed — retrying with --repo-update"
-    if ! pod install --repo-update 2>&1 | tee "$pod_log"; then
+    if ! ci_run_pod_install --repo-update; then
       echo "error: pod install failed"
-      if grep -Eiq 'mapbox|RNMapbox|RNMAPBOX|download.?token|api\.mapbox\.com|401|403' "$pod_log"; then
-        echo "error: Looks Mapbox-related. Either remove unused @rnmapbox/maps, or set ASC Environment Variable RNMAPBOX_MAPS_DOWNLOAD_TOKEN (secret download token from mapbox.com)."
-      fi
-      rm -f "$pod_log"
       exit 1
     fi
   fi
-  rm -f "$pod_log"
 
   if [ ! -f Podfile.lock ]; then
     echo "error: Podfile.lock fehlt nach pod install"
@@ -127,34 +142,36 @@ ci_pod_install() {
   echo "ci: pods ok — workspace=$(pwd)/LuMap.xcworkspace"
 }
 
-# Expo/CocoaPods Archive MUST use the workspace. Building .xcodeproj skips Pod
-# targets → missing *.modulemap / "No such module 'Expo'".
-#
-# Scripts CANNOT override App Store Connect → Workflow → Environment → Xcode Project.
-# There is no reliable in-script workaround (xcodebuild PATH hijacks were removed).
-ci_require_workspace_or_explain() {
+# True when ASC already points at the CocoaPods workspace.
+# Accepts absolute/relative paths and any string containing LuMap.xcworkspace
+# (ASC sometimes passes full paths vs ios/LuMap.xcworkspace).
+ci_workspace_configured() {
   local project="${CI_XCODE_PROJECT:-}"
   local base
   base="$(basename "${project:-}")"
   echo "ci: CI_XCODE_PROJECT=${project:-unset} (basename=${base:-unset})"
 
   case "$project" in
-    *.xcworkspace)
+    *LuMap.xcworkspace* | *.xcworkspace)
       echo "ci: workflow already points at xcworkspace — good"
       return 0
       ;;
   esac
   case "$base" in
-    *.xcworkspace)
+    LuMap.xcworkspace | *.xcworkspace)
       echo "ci: workflow already points at xcworkspace — good"
       return 0
       ;;
   esac
+  return 1
+}
 
+ci_print_workspace_fix_message() {
+  local project="${CI_XCODE_PROJECT:-}"
   cat <<'EOF'
 
 ================================================================================
-FATAL: Xcode Cloud builds LuMap.xcodeproj instead of LuMap.xcworkspace
+Xcode Cloud must build ios/LuMap.xcworkspace (not LuMap.xcodeproj)
 
 Expo / CocoaPods Archive requires the workspace. With only the .xcodeproj,
 Pods (Expo, react-native-maps, …) are skipped → "No such module 'Expo'".
@@ -168,9 +185,28 @@ ci_scripts CANNOT change this. You must fix App Store Connect:
      (NOT ios/LuMap.xcodeproj)
   4. Save → Start Build
 
-Expected CI_XCODE_PROJECT value: a path ending in LuMap.xcworkspace
+Expected CI_XCODE_PROJECT value: a path containing LuMap.xcworkspace
 EOF
   echo "Actual CI_XCODE_PROJECT='${project:-unset}'"
   echo "================================================================================"
+}
+
+# Soft check for post_clone: never abort npm/pod work; only warn loudly.
+ci_warn_unless_workspace() {
+  if ci_workspace_configured; then
+    return 0
+  fi
+  echo "ci: WARN — ASC still points at .xcodeproj; continuing so npm/pods still run."
+  ci_print_workspace_fix_message
+  return 0
+}
+
+# Hard check for pre_xcodebuild / archive gate.
+ci_require_workspace_or_explain() {
+  if ci_workspace_configured; then
+    return 0
+  fi
+  echo "FATAL: refusing Archive against .xcodeproj"
+  ci_print_workspace_fix_message
   exit 1
 }
