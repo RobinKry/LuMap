@@ -1,6 +1,9 @@
 #!/bin/bash
 # Xcode Cloud workaround: ASC often points at LuMap.xcodeproj, but Expo/CocoaPods
 # Archive requires LuMap.xcworkspace. Rewrite only LuMap.xcodeproj invocations.
+#
+# Always exec the real Mach-O via an absolute path recorded at shim-install time
+# (never recurse into this script via DEVELOPER_DIR / PATH).
 set -euo pipefail
 
 LOG_DIR="${CI_DERIVED_DATA_PATH:-${TMPDIR:-/tmp}}"
@@ -10,48 +13,43 @@ mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 REAL_XCODEBUILD=""
 
-# Prefer the real toolchain binary, never this shim.
-if [ -x /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild ]; then
-  REAL_XCODEBUILD=/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild
-elif [ -n "${DEVELOPER_DIR:-}" ] && [ -x "${DEVELOPER_DIR}/usr/bin/xcodebuild" ]; then
-  candidate="${DEVELOPER_DIR}/usr/bin/xcodebuild"
-  case "$candidate" in
-    "$SELF_DIR"/*) ;;
-    *) REAL_XCODEBUILD="$candidate" ;;
-  esac
+# 1) Absolute path written by ci_install_xcodebuild_shim (preferred).
+if [ -f "$SELF_DIR/real_paths.env" ]; then
+  # shellcheck disable=SC1091
+  . "$SELF_DIR/real_paths.env"
 fi
 
-if [ -z "$REAL_XCODEBUILD" ]; then
-  while IFS= read -r candidate; do
-    [ -z "$candidate" ] && continue
-    case "$candidate" in
-      "$SELF_DIR"/xcodebuild) continue ;;
-    esac
-    if [ -x "$candidate" ]; then
-      REAL_XCODEBUILD="$candidate"
-      break
-    fi
-  done < <(type -a -p xcodebuild 2>/dev/null || true)
+# 2) Hardcoded Applications path (never the overlay).
+if [ -z "${REAL_XCODEBUILD:-}" ] || [ ! -x "${REAL_XCODEBUILD:-}" ]; then
+  if [ -x /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild ]; then
+    REAL_XCODEBUILD=/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild
+  fi
 fi
 
-if [ -z "$REAL_XCODEBUILD" ] || [ ! -x "$REAL_XCODEBUILD" ] || [ "$REAL_XCODEBUILD" = "$SELF_DIR/xcodebuild" ]; then
+# 3) Last resort: Applications path only (avoid PATH recursion into this shim).
+if [ -z "${REAL_XCODEBUILD:-}" ] || [ ! -x "${REAL_XCODEBUILD:-}" ]; then
+  if [ -x /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild ]; then
+    REAL_XCODEBUILD=/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild
+  fi
+fi
+
+if [ -z "${REAL_XCODEBUILD:-}" ] || [ ! -x "$REAL_XCODEBUILD" ] || [ "$REAL_XCODEBUILD" = "$SELF_DIR/xcodebuild" ]; then
   echo "ci_xcodebuild_shim: error: real xcodebuild not found" >&2
   exit 127
 fi
 
-REPO_IOS=""
-SHIM_IOS="$(cd "$SELF_DIR/../.." && pwd)"
-if [ -d "$SHIM_IOS/LuMap.xcworkspace" ]; then
-  REPO_IOS="$SHIM_IOS"
-elif [ -n "${CI_PRIMARY_REPOSITORY_PATH:-}" ] && [ -d "${CI_PRIMARY_REPOSITORY_PATH}/ios/LuMap.xcworkspace" ]; then
-  REPO_IOS="${CI_PRIMARY_REPOSITORY_PATH}/ios"
-elif [ -n "${CI_WORKSPACE:-}" ] && [ -d "${CI_WORKSPACE}/ios/LuMap.xcworkspace" ]; then
-  REPO_IOS="${CI_WORKSPACE}/ios"
-fi
-
-WORKSPACE_PATH=""
-if [ -n "$REPO_IOS" ]; then
-  WORKSPACE_PATH="$REPO_IOS/LuMap.xcworkspace"
+# WORKSPACE_PATH may already be set via real_paths.env (needed when this script
+# runs from the DEVELOPER_DIR overlay copy, where relative paths ≠ ios/).
+if [ -z "${WORKSPACE_PATH:-}" ] || [ ! -d "${WORKSPACE_PATH:-}" ]; then
+  WORKSPACE_PATH=""
+  SHIM_IOS="$(cd "$SELF_DIR/../.." && pwd)"
+  if [ -d "$SHIM_IOS/LuMap.xcworkspace" ]; then
+    WORKSPACE_PATH="$SHIM_IOS/LuMap.xcworkspace"
+  elif [ -n "${CI_PRIMARY_REPOSITORY_PATH:-}" ] && [ -d "${CI_PRIMARY_REPOSITORY_PATH}/ios/LuMap.xcworkspace" ]; then
+    WORKSPACE_PATH="${CI_PRIMARY_REPOSITORY_PATH}/ios/LuMap.xcworkspace"
+  elif [ -n "${CI_WORKSPACE:-}" ] && [ -d "${CI_WORKSPACE}/ios/LuMap.xcworkspace" ]; then
+    WORKSPACE_PATH="${CI_WORKSPACE}/ios/LuMap.xcworkspace"
+  fi
 fi
 
 args=("$@")
@@ -103,6 +101,7 @@ done
   echo "---- $(date -u +%Y-%m-%dT%H:%M:%SZ) ----"
   echo "real=$REAL_XCODEBUILD"
   echo "rewrote=$rewrote workspace=${WORKSPACE_PATH:-none}"
+  echo "DEVELOPER_DIR=${DEVELOPER_DIR:-unset}"
   echo "argv_in: $*"
   printf 'argv_out:'
   printf ' %q' "${new_args[@]}"

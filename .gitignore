@@ -32,6 +32,9 @@ android/app/build/
 ios/build/
 ios/Pods/
 ios/ci_scripts/CI_XCODE_PROJECT.txt
+ios/ci_scripts/bin/real_paths.env
+ios/ci_scripts/xcode_overlay/*
+!ios/ci_scripts/xcode_overlay/.gitkeep
 ios/.xcode.env.local
 *.ipa
 *.dSYM.zip

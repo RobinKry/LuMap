@@ -1,18 +1,40 @@
 #!/bin/bash
 # Intercept `xcrun xcodebuild …` so the LuMap workspace shim still applies.
+# Real xcrun is always an absolute Mach-O path (never this script / overlay).
 set -euo pipefail
 
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 REAL_XCRUN=""
-if [ -x /usr/bin/xcrun ]; then
-  REAL_XCRUN=/usr/bin/xcrun
-elif [ -n "${DEVELOPER_DIR:-}" ] && [ -x "${DEVELOPER_DIR}/usr/bin/xcrun" ]; then
-  REAL_XCRUN="${DEVELOPER_DIR}/usr/bin/xcrun"
+
+if [ -f "$SELF_DIR/real_paths.env" ]; then
+  # shellcheck disable=SC1091
+  . "$SELF_DIR/real_paths.env"
 fi
-if [ -z "$REAL_XCRUN" ]; then
+
+if [ -z "${REAL_XCRUN:-}" ] || [ ! -x "${REAL_XCRUN:-}" ]; then
+  if [ -x /usr/bin/xcrun ]; then
+    REAL_XCRUN=/usr/bin/xcrun
+  elif [ -x /Applications/Xcode.app/Contents/Developer/usr/bin/xcrun ]; then
+    REAL_XCRUN=/Applications/Xcode.app/Contents/Developer/usr/bin/xcrun
+  fi
+fi
+
+if [ -z "${REAL_XCRUN:-}" ] || [ ! -x "$REAL_XCRUN" ]; then
   echo "ci_xcrun_shim: error: real xcrun not found" >&2
   exit 127
 fi
+
+# Never exec ourselves (overlay may symlink xcrun → this script).
+case "$REAL_XCRUN" in
+  "$SELF_DIR"/xcrun|*xcode_overlay*xcrun|*LuMapXcodeShimDeveloper*xcrun)
+    if [ -x /usr/bin/xcrun ]; then
+      REAL_XCRUN=/usr/bin/xcrun
+    else
+      echo "ci_xcrun_shim: error: refusing recursive xcrun" >&2
+      exit 127
+    fi
+    ;;
+esac
 
 if [ "${1:-}" = "xcodebuild" ]; then
   shift

@@ -51,9 +51,11 @@ else:
     print("ci_pre_xcodebuild: explicit modules already set")
 PY
 
-# Gate: ASC workspace OK, or shim+workspace present → continue.
+# Gate: ASC workspace OK, or shim+workspace present → continue (no hard-fail).
 ci_require_workspace_or_explain "$REPO_ROOT"
+ci_verify_xcodebuild_shim "$REPO_ROOT"
 
 echo "ci_pre_xcodebuild: which xcodebuild=$(command -v xcodebuild)"
+echo "ci_pre_xcodebuild: DEVELOPER_DIR=${DEVELOPER_DIR:-unset}"
 echo "ci_pre_xcodebuild: CI_XCODE_PROJECT=${CI_XCODE_PROJECT:-unset}"
 echo "ci_pre_xcodebuild: done"
