@@ -346,6 +346,39 @@ ci_run_pod_install() {
   return 0
 }
 
+# Embed Pods/Pods.xcodeproj into LuMap.xcodeproj (LuMap → Pods-LuMap dependency)
+# so Archive with -project still builds CocoaPods. Idempotent; requires xcodeproj gem.
+ci_embed_pods_in_xcodeproj() {
+  local root="$1"
+  local script="$root/ios/ci_scripts/embed_pods_in_xcodeproj.rb"
+  if [ ! -f "$script" ]; then
+    echo "ci: WARN — embed script missing at $script"
+    return 1
+  fi
+  if [ ! -d "$root/ios/Pods/Pods.xcodeproj" ]; then
+    echo "ci: WARN — Pods.xcodeproj missing; skip embed"
+    return 1
+  fi
+  echo "ci: embedding Pods.xcodeproj into LuMap.xcodeproj"
+  if ruby "$script"; then
+    echo "ci: pods embed OK"
+    return 0
+  fi
+  echo "ci: WARN — pods embed failed (Archive via .xcodeproj may miss Expo modules)"
+  return 1
+}
+
+# True when LuMap.xcodeproj already depends on Pods-LuMap (subproject embed).
+ci_pods_embedded_in_xcodeproj() {
+  local root="$1"
+  local pbx="$root/ios/LuMap.xcodeproj/project.pbxproj"
+  [ -f "$pbx" ] || return 1
+  grep -q 'Pods/Pods.xcodeproj' "$pbx" 2>/dev/null || return 1
+  grep -q 'name = "Pods-LuMap"' "$pbx" 2>/dev/null || return 1
+  grep -q 'PBXTargetDependency' "$pbx" 2>/dev/null || return 1
+  return 0
+}
+
 ci_pod_install() {
   local root="$1"
   cd "$root/ios"
@@ -379,6 +412,12 @@ ci_pod_install() {
     exit 1
   fi
   echo "ci: pods ok — workspace=$(pwd)/LuMap.xcworkspace"
+
+  # Embed Pods.xcodeproj into LuMap.xcodeproj so Archive via -project still builds pods
+  # (ASC may still point at .xcodeproj; PATH/DEVELOPER_DIR shims miss absolute xcodebuild).
+  if ! ci_embed_pods_in_xcodeproj "$root"; then
+    echo "ci: WARN — continuing without embed (prefer ASC → ios/LuMap.xcworkspace)"
+  fi
 }
 
 # True when ASC already points at the CocoaPods workspace.
@@ -442,13 +481,18 @@ ci_print_workspace_fix_message() {
 ================================================================================
 Xcode Cloud should build ios/LuMap.xcworkspace (not LuMap.xcodeproj)
 
-Expo / CocoaPods Archive requires the workspace. With only the .xcodeproj,
+Expo / CocoaPods Archive requires the workspace *or* Pods embedded in the
+.xcodeproj (this repo does both). With only the naked .xcodeproj and no embed,
 Pods (Expo, react-native-maps, …) are skipped → "No such module 'Expo'".
 
-This repo installs a DEVELOPER_DIR overlay + xcodebuild/xcrun shims that rewrite
--project …/LuMap.xcodeproj → -workspace …/LuMap.xcworkspace (PATH, xcrun, and
-/usr/bin/xcodebuild via DEVELOPER_DIR). Absolute /Applications/.../xcodebuild
-still bypasses the overlay — set ASC correctly when you can:
+This repo:
+  • embeds Pods/Pods.xcodeproj into LuMap.xcodeproj (LuMap → Pods-LuMap) after
+    each pod install so -project Archive still builds pods
+  • also installs a DEVELOPER_DIR overlay + xcodebuild/xcrun shims that rewrite
+    -project …/LuMap.xcodeproj → -workspace …/LuMap.xcworkspace when possible
+
+Absolute /Applications/.../xcodebuild may still bypass shims — set ASC to the
+workspace when you can:
 
 
 
@@ -480,7 +524,8 @@ ci_warn_unless_workspace() {
   return 0
 }
 
-# Archive gate: prefer ASC workspace; otherwise rely on the xcodebuild shim.
+# Archive gate: prefer ASC workspace; else pods-embed and/or xcodebuild shim.
+# Soft-gate: never hard-fail when Pods are embedded into LuMap.xcodeproj.
 ci_require_workspace_or_explain() {
   local root="$1"
   local shim asc_orig
@@ -506,6 +551,14 @@ ci_require_workspace_or_explain() {
     esac
   fi
 
+  # Primary fallback after Build 20: Pods embedded in .xcodeproj (no ASC/shim needed).
+  if ci_pods_embedded_in_xcodeproj "$root"; then
+    echo "ci: ASC still has .xcodeproj — Pods embedded in LuMap.xcodeproj (Pods-LuMap dependency); continuing."
+    ci_write_workspace_diag "embed-xcodeproj"
+    ci_print_workspace_fix_message "warn"
+    return 0
+  fi
+
   if [ -x "$shim" ] && [ -d "$root/ios/LuMap.xcworkspace" ]; then
     echo "ci: ASC still has .xcodeproj — proceeding with xcodebuild shim (rewrite to workspace)."
     ci_write_workspace_diag "shim-xcodeproj"
@@ -513,7 +566,7 @@ ci_require_workspace_or_explain() {
     return 0
   fi
 
-  echo "FATAL: ASC points at .xcodeproj and xcodebuild shim/workspace unavailable"
+  echo "FATAL: ASC points at .xcodeproj, pods not embedded, and xcodebuild shim/workspace unavailable"
   ci_write_workspace_diag "fatal-xcodeproj"
   ci_print_workspace_fix_message "error"
   exit 1

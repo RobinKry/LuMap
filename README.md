@@ -39,4 +39,10 @@ Expo/CocoaPods brauchen den **Workspace**, nicht das nackte Xcode-Projekt.
 3. **Xcode Project or Workspace** auf `ios/LuMap.xcworkspace` setzen (**nicht** `ios/LuMap.xcodeproj`)
 4. Speichern → Build starten
 
-`ios/ci_scripts` installieren npm/Pods und brechen ab, wenn ASC noch auf `.xcodeproj` zeigt (sonst `No such module 'Expo'`). Scripts können die ASC-Einstellung nicht überschreiben.
+Zusätzlich bettet `ios/ci_scripts/embed_pods_in_xcodeproj.rb` nach jedem `pod install` `Pods/Pods.xcodeproj` in `LuMap.xcodeproj` ein (Target-Dependency `LuMap` → `Pods-LuMap`), damit Archive auch mit `-project` die Pods baut — Fallback, falls ASC noch auf `.xcodeproj` zeigt oder absolute `xcodebuild`-Pfade Shims umgehen.
+
+Lokal nach `pod install` einmal:
+
+```bash
+ruby ios/ci_scripts/embed_pods_in_xcodeproj.rb
+```

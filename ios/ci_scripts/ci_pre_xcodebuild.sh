@@ -13,7 +13,7 @@ ci_prepare_path
 ci_install_xcodebuild_shim "$REPO_ROOT"
 ci_log_env
 
-# Soft warn early; archive gate below allows shim when ASC still has .xcodeproj.
+# Soft warn early; archive gate allows embed and/or shim when ASC still has .xcodeproj.
 ci_warn_unless_workspace
 
 ci_npm_install "$REPO_ROOT"
