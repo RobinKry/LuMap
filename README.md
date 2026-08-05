@@ -39,6 +39,18 @@ Expo/CocoaPods brauchen den **Workspace**, nicht das nackte Xcode-Projekt.
 3. **Xcode Project or Workspace** auf `ios/LuMap.xcworkspace` setzen (**nicht** `ios/LuMap.xcodeproj`)
 4. Speichern → Build starten
 
+### TestFlight / App Store Connect Upload (Pflicht)
+
+Ein grüner **Archive**-Build erscheint **nicht** automatisch unter TestFlight. Der Workflow muss die IPA für ASC vorbereiten **und** hochladen:
+
+1. [Xcode Cloud → Workflow Default → Edit Workflow](https://appstoreconnect.apple.com/apps/6796983748/ci)
+2. Unter **Actions** → **Archive - iOS** öffnen
+3. **Deployment Preparation** auf **TestFlight and App Store** setzen (oder **TestFlight (Internal Testing Only)** nur für internes Team)
+4. Unter **Post-Actions** auf **+** → **TestFlight Internal Testing** (lädt den Build nach App Store Connect / TestFlight; optional eine interne Tester-Gruppe wählen)
+5. **Save** → **Start Build** (oder nächsten Push abwarten)
+
+Danach unter [TestFlight → iOS Builds](https://appstoreconnect.apple.com/apps/6796983748/testflight/ios) prüfen. Status oft zuerst **Processing** (meist Minuten, manchmal 15–60 Min). Export Compliance ist im Repo mit `ITSAppUsesNonExemptEncryption = false` gesetzt.
+
 Zusätzlich bettet `ios/ci_scripts/embed_pods_in_xcodeproj.rb` nach jedem `pod install` `Pods/Pods.xcodeproj` in `LuMap.xcodeproj` ein (Target-Dependency `LuMap` → `Pods-LuMap`), damit Archive auch mit `-project` die Pods baut — Fallback, falls ASC noch auf `.xcodeproj` zeigt oder absolute `xcodebuild`-Pfade Shims umgehen.
 
 Lokal nach `pod install` einmal:

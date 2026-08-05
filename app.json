@@ -12,8 +12,10 @@
       "bundleIdentifier": "com.lumap.com",
       "appleTeamId": "3RS7CS256A",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "LuMap zeigt Events in deiner Nähe auf der Karte."
-      }
+        "NSLocationWhenInUseUsageDescription": "LuMap zeigt Events in deiner Nähe auf der Karte.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "buildNumber": "22"
     },
     "android": {
       "adaptiveIcon": {

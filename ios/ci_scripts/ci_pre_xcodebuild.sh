@@ -51,6 +51,20 @@ else:
     print("ci_pre_xcodebuild: explicit modules already set")
 PY
 
+# Use Xcode Cloud build number as CFBundleVersion when available (avoids duplicate build 1).
+if [ -n "${CI_BUILD_NUMBER:-}" ]; then
+  echo "ci_pre_xcodebuild: setting CURRENT_PROJECT_VERSION=${CI_BUILD_NUMBER}"
+  python3 <<PY
+from pathlib import Path
+import os, re
+build = os.environ["CI_BUILD_NUMBER"]
+p = Path("ios/LuMap.xcodeproj/project.pbxproj")
+text = re.sub(r"CURRENT_PROJECT_VERSION = \d+;", f"CURRENT_PROJECT_VERSION = {build};", p.read_text())
+p.write_text(text)
+print(f"ci_pre_xcodebuild: CURRENT_PROJECT_VERSION -> {build}")
+PY
+fi
+
 # Gate: ASC workspace OK, or shim+workspace present → continue (no hard-fail).
 ci_require_workspace_or_explain "$REPO_ROOT"
 ci_verify_xcodebuild_shim "$REPO_ROOT"
